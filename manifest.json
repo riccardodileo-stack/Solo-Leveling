@@ -1,6 +1,6 @@
 {
-  "name": "Leveling up — Solo Leveling Progress Tracker",
-  "short_name": "Leveling Up",
+  "name": "Solo Leveling",
+  "short_name": "Solo Leveling",
   "description": "Tracker personale offline per massimizzare il proprio potenziale",
   "start_url": "./index.html",
   "scope": "./",
