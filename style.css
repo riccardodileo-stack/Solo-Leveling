@@ -56,7 +56,7 @@ body::before {
   position: fixed;
   inset: 0;
   z-index: -2;
-  background: #07121d;
+  background: #050a13;
 }
 
 body::after {
@@ -1074,29 +1074,16 @@ p {
   top: 0;
   left: 0;
   right: 0;
-  height: calc(env(safe-area-inset-top, 0px) + 14px);
+
+  height: env(safe-area-inset-top, 0px);
+
   z-index: 9999;
   pointer-events: none;
 
-  background: var(--status-glass);
-  -webkit-backdrop-filter: blur(18px) saturate(160%);
-  backdrop-filter: blur(18px) saturate(160%);
+  background: rgba(5, 10, 19, 0.68);
 
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.status-glass::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: -18px;
-  height: 18px;
-  background: linear-gradient(
-    to bottom,
-    rgba(7, 18, 29, 0.16),
-    rgba(7, 18, 29, 0)
-  );
+  -webkit-backdrop-filter: blur(7px);
+  backdrop-filter: blur(7px);
 }
 
 @media (min-width: 700px) {

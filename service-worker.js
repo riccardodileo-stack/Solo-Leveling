@@ -1,4 +1,4 @@
-const CACHE_NAME = 'leveling-up-v3.0';
+const CACHE_NAME = 'leveling-up-v3.1';
 const APP_SHELL = [
   './',
   './index.html',
