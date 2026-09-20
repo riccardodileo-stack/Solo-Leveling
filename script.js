@@ -80,6 +80,10 @@ let ui = {
   section: state.started ? 'home' : 'settings',
   langTab: 'italian',
   fitnessTab: 'run',
+
+  gymSheet: 'gym1',
+  gymSheetsOpen: false,
+
   statPeriod: 'month',
   selectedDate: todayISO(),
   calendarMonth: monthISO(todayISO()),
@@ -646,7 +650,217 @@ function runCharts() {
 
 function renderGym(stats) {
   const keys = ['gym1', 'gym2', 'gym3'];
-  return `<div class="card emphasis"><div class="card-header"><div><h2>Strength</h2><p>Ogni allenamento saltato sottrae lo stesso incremento</p></div><strong>${round1(stats.strength)} / 99</strong></div><div class="progress"><span style="width:${stats.strength}%"></span></div><p class="helper">Incremento palestra: +${round1(stats.gymIncrement)} per allenamento · tennis: +${round1(stats.tennisIncrement)}</p></div>${keys.map(key => `<div class="card"><div class="card-header"><div><h2>${TASKS[key].title}</h2><p>${state.gymTemplates[key].length} esercizi configurati</p></div><button class="btn small" data-start-workout="${key}">Inizia</button></div>${upcomingGroupTasks(key)}<div class="btn-row"><button class="btn secondary small" data-edit-gym="${key}">Modifica scheda</button></div></div>`).join('')}`;
+
+  return `
+    <div class="card emphasis">
+      <div class="card-header">
+        <div>
+          <h2>Strength</h2>
+          <p>Ogni allenamento saltato sottrae lo stesso incremento</p>
+        </div>
+
+        <strong>${round1(stats.strength)} / 99</strong>
+      </div>
+
+      <div class="progress">
+        <span style="width:${stats.strength}%"></span>
+      </div>
+
+      <p class="helper">
+        Incremento palestra: +${round1(stats.gymIncrement)} per allenamento
+        · tennis: +${round1(stats.tennisIncrement)}
+      </p>
+    </div>
+
+    <!-- SCHEDE PALESTRA -->
+    <div class="card gym-library">
+      <button
+        class="gym-library-header"
+        type="button"
+        data-toggle-gym-sheets
+      >
+        <div class="gym-library-title">
+          <div class="gym-library-icon">
+            ${gymSheetIcon()}
+          </div>
+
+          <div>
+            <h2>Schede palestra</h2>
+            <p>Gestisci esercizi e allenamenti guidati</p>
+          </div>
+        </div>
+
+        <span class="gym-chevron ${ui.gymSheetsOpen ? 'open' : ''}">
+          ›
+        </span>
+      </button>
+
+      ${
+        ui.gymSheetsOpen
+          ? `
+            <div class="gym-library-content">
+
+              <div class="gym-sheet-tabs">
+                ${keys.map((key, index) => `
+                  <button
+                    type="button"
+                    class="gym-sheet-tab ${ui.gymSheet === key ? 'active' : ''}"
+                    data-gym-sheet="${key}"
+                  >
+                    Scheda ${index + 1}
+                  </button>
+                `).join('')}
+              </div>
+
+              ${renderGymSheetPreview(ui.gymSheet)}
+
+            </div>
+          `
+          : ''
+      }
+    </div>
+
+    <!-- TASK PALESTRA -->
+    <div class="gym-task-section">
+      <div class="gym-section-heading">
+        <div>
+          <div class="eyebrow">Programmazione</div>
+          <h2>Task palestra</h2>
+        </div>
+      </div>
+
+      ${keys.map((key, index) => `
+        <div class="card gym-task-card">
+          <div class="card-header">
+            <div>
+              <h2>Palestra — Tipo ${index + 1}</h2>
+              <p>Sessioni programmate</p>
+            </div>
+
+            <span class="badge">
+              ${state.gymTemplates[key].length} esercizi
+            </span>
+          </div>
+
+          ${upcomingGroupTasks(key)}
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function renderGymSheetPreview(key) {
+  const exercises = state.gymTemplates[key];
+  const number = key.replace('gym', '');
+
+  return `
+    <div class="gym-sheet-detail">
+
+      <div class="gym-sheet-detail-header">
+        <div>
+          <span class="gym-sheet-number">SCHEDA ${number}</span>
+          <h3>
+            ${
+              exercises.length
+                ? `${exercises.length} esercizi configurati`
+                : 'Scheda ancora vuota'
+            }
+          </h3>
+        </div>
+      </div>
+
+      ${
+        exercises.length
+          ? `
+            <div class="gym-exercise-list">
+              ${exercises.map((exercise, index) => `
+                <div class="gym-exercise-preview">
+
+                  <div class="gym-exercise-index">
+                    ${index + 1}
+                  </div>
+
+                  <div class="gym-exercise-copy">
+                    <strong>${esc(exercise.name)}</strong>
+
+                    <span>
+                      ${exercise.sets} serie
+                      ·
+                      ${
+                        exercise.mode === 'duration'
+                          ? `${exercise.value} sec`
+                          : `${exercise.value} reps`
+                      }
+                      ${
+                        exercise.weight
+                          ? ` · ${exercise.weight} kg`
+                          : ''
+                      }
+                    </span>
+                  </div>
+
+                  <div class="gym-exercise-rest">
+                    ${exercise.rest}s
+                  </div>
+
+                </div>
+              `).join('')}
+            </div>
+          `
+          : `
+            <div class="gym-empty-sheet">
+              <div class="gym-empty-icon">
+                ${gymSheetIcon()}
+              </div>
+
+              <p>
+                Nessun esercizio configurato.
+              </p>
+
+              <span>
+                Crea la tua scheda aggiungendo esercizi, serie,
+                ripetizioni, pesi e recuperi.
+              </span>
+            </div>
+          `
+      }
+
+      <div class="gym-sheet-actions">
+
+        <button
+          class="btn secondary grow"
+          type="button"
+          data-edit-gym="${key}"
+        >
+          Modifica scheda
+        </button>
+
+        <button
+          class="btn grow"
+          type="button"
+          data-start-workout="${key}"
+        >
+          Avvia allenamento
+        </button>
+
+      </div>
+
+    </div>
+  `;
+}
+
+
+function gymSheetIcon() {
+  return `
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M8 4.5h8" />
+      <path d="M9 3h6v3H9z" />
+      <rect x="5" y="5.5" width="14" height="15" rx="3" />
+      <path d="M8 10h8" />
+      <path d="M8 14h5" />
+      <path d="M8 17h7" />
+    </svg>
+  `;
 }
 
 function renderBody(stats) {
@@ -662,18 +876,97 @@ function renderBody(stats) {
 }
 
 function bindFitness() {
-  document.querySelectorAll('[data-fitness-tab]').forEach(b => b.onclick = () => { ui.fitnessTab = b.dataset.fitnessTab; render(); });
+  document
+    .querySelectorAll('[data-fitness-tab]')
+    .forEach(button => {
+      button.onclick = () => {
+        ui.fitnessTab = button.dataset.fitnessTab;
+        render();
+      };
+    });
+
   bindTaskChecks();
-  document.querySelectorAll('[data-chart-period]').forEach(b => b.onclick = () => { ui.chartPeriod = b.dataset.chartPeriod; render(); });
-  document.querySelectorAll('[data-edit-gym]').forEach(b => b.onclick = () => openGymEditor(b.dataset.editGym));
-  document.querySelectorAll('[data-start-workout]').forEach(b => b.onclick = () => startWorkout(b.dataset.startWorkout));
-  const wf = document.getElementById('weightForm');
-  if (wf)
-    wf.onsubmit = e => { e.preventDefault(); const fd = new FormData(wf); const w = Number(fd.get('weight')); state.currentHeight = Number(fd.get('height')); state.weights.push({ date: todayISO(), weight: w }); state.weights.sort((a, b) => a.date.localeCompare(b.date)); saveState(); render(); notify('Peso aggiornato.'); };
-  if (ui.fitnessTab === 'run')
+
+  document
+    .querySelectorAll('[data-chart-period]')
+    .forEach(button => {
+      button.onclick = () => {
+        ui.chartPeriod = button.dataset.chartPeriod;
+        render();
+      };
+    });
+
+  /* Apri / chiudi sezione Schede palestra */
+  const gymToggle = document.querySelector('[data-toggle-gym-sheets]');
+
+  if (gymToggle) {
+    gymToggle.onclick = () => {
+      ui.gymSheetsOpen = !ui.gymSheetsOpen;
+      render();
+    };
+  }
+
+  /* Selezione Scheda 1 / 2 / 3 */
+  document
+    .querySelectorAll('[data-gym-sheet]')
+    .forEach(button => {
+      button.onclick = () => {
+        ui.gymSheet = button.dataset.gymSheet;
+        render();
+      };
+    });
+
+  /* Editor scheda */
+  document
+    .querySelectorAll('[data-edit-gym]')
+    .forEach(button => {
+      button.onclick = () => {
+        openGymEditor(button.dataset.editGym);
+      };
+    });
+
+  /* Workout guidato */
+  document
+    .querySelectorAll('[data-start-workout]')
+    .forEach(button => {
+      button.onclick = () => {
+        startWorkout(button.dataset.startWorkout);
+      };
+    });
+
+  const weightForm = document.getElementById('weightForm');
+
+  if (weightForm) {
+    weightForm.onsubmit = event => {
+      event.preventDefault();
+
+      const fd = new FormData(weightForm);
+      const weight = Number(fd.get('weight'));
+
+      state.currentHeight = Number(fd.get('height'));
+
+      state.weights.push({
+        date: todayISO(),
+        weight
+      });
+
+      state.weights.sort((a, b) =>
+        a.date.localeCompare(b.date)
+      );
+
+      saveState();
+      render();
+      notify('Peso aggiornato.');
+    };
+  }
+
+  if (ui.fitnessTab === 'run') {
     drawRunCharts();
-  if (ui.fitnessTab === 'body')
+  }
+
+  if (ui.fitnessTab === 'body') {
     drawWeightChart();
+  }
 }
 
 // ============================================================
@@ -691,16 +984,384 @@ function openTennisModal(date, task) {
 }
 
 function openGymEditor(key) {
-  const rows = state.gymTemplates[key].map((ex, i) => exerciseEditorRow(ex, i)).join('');
-  openModal(`<h2>${TASKS[key].title}</h2><p>Definisci esercizi e recuperi. Puoi modificarli in qualsiasi momento.</p><div id="exerciseRows">${rows}</div><button class="btn secondary small" id="addExercise">+ Esercizio</button><div style="height:14px"></div><button class="btn" id="saveGym" style="width:100%">Salva scheda</button>`);
-  document.getElementById('addExercise').onclick = () => { document.getElementById('exerciseRows').insertAdjacentHTML('beforeend', exerciseEditorRow({ name: '', sets: 3, mode: 'reps', value: 10, weight: 0, rest: 60 }, Date.now())); bindModeSelects(); };
-  bindModeSelects();
-  document.getElementById('saveGym').onclick = () => { const exercises = [...document.querySelectorAll('.exercise-row')].map(row => ({ name: row.querySelector('[name=name]').value.trim(), sets: Number(row.querySelector('[name=sets]').value), mode: row.querySelector('[name=mode]').value, value: Number(row.querySelector('[name=value]').value), weight: Number(row.querySelector('[name=weight]').value || 0), rest: Number(row.querySelector('[name=rest]').value) })).filter(x => x.name); state.gymTemplates[key] = exercises; saveState(); closeModal(); render(); notify('Scheda salvata.'); };
+  const sheetNumber = key.replace('gym', '');
+
+  const rows = state.gymTemplates[key]
+    .map((exercise, index) =>
+      exerciseEditorRow(exercise, index)
+    )
+    .join('');
+
+  openModal(`
+    <div class="gym-editor">
+
+      <div class="gym-editor-header">
+        <div class="gym-editor-header-icon">
+          ${gymSheetIcon()}
+        </div>
+
+        <div>
+          <div class="eyebrow">Workout editor</div>
+          <h2>Scheda ${sheetNumber}</h2>
+          <p>
+            Configura esercizi, serie, ripetizioni, pesi e tempi di recupero.
+          </p>
+        </div>
+      </div>
+
+      <div id="exerciseRows" class="gym-editor-list">
+        ${
+          rows ||
+          `
+            <div class="gym-editor-empty">
+              <div class="gym-empty-icon">
+                ${gymSheetIcon()}
+              </div>
+
+              <strong>Nessun esercizio</strong>
+
+              <p>
+                Aggiungi il primo esercizio per iniziare a costruire la scheda.
+              </p>
+            </div>
+          `
+        }
+      </div>
+
+      <button
+        class="gym-add-exercise"
+        id="addExercise"
+        type="button"
+      >
+        <span class="gym-add-plus">+</span>
+
+        <span>
+          <strong>Aggiungi esercizio</strong>
+          <small>Inserisci un nuovo blocco nella scheda</small>
+        </span>
+      </button>
+
+      <button
+        class="btn gym-save-sheet"
+        id="saveGym"
+        type="button"
+      >
+        Salva scheda
+      </button>
+
+    </div>
+  `);
+
+  bindExerciseEditor();
+
+  document.getElementById('addExercise').onclick = () => {
+    const container = document.getElementById('exerciseRows');
+
+    /* Se c'è il messaggio "nessun esercizio", lo togliamo */
+    const empty = container.querySelector('.gym-editor-empty');
+
+    if (empty) {
+      empty.remove();
+    }
+
+    const index = container.querySelectorAll('.exercise-row').length;
+
+    container.insertAdjacentHTML(
+      'beforeend',
+      exerciseEditorRow(
+        {
+          name: '',
+          sets: 3,
+          mode: 'reps',
+          value: 10,
+          weight: 0,
+          rest: 60
+        },
+        index
+      )
+    );
+
+    bindExerciseEditor();
+
+    /*
+      Scroll morbido verso il nuovo esercizio.
+    */
+    const cards = container.querySelectorAll('.exercise-row');
+    const lastCard = cards[cards.length - 1];
+
+    if (lastCard) {
+      lastCard.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center'
+      });
+    }
+  };
+
+  document.getElementById('saveGym').onclick = () => {
+    const exercises = [
+      ...document.querySelectorAll('.exercise-row')
+    ]
+      .map(row => ({
+        name: row
+          .querySelector('[name=name]')
+          .value
+          .trim(),
+
+        sets: Number(
+          row.querySelector('[name=sets]').value
+        ),
+
+        mode: row
+          .querySelector('[name=mode]')
+          .value,
+
+        value: Number(
+          row.querySelector('[name=value]').value
+        ),
+
+        weight: Number(
+          row.querySelector('[name=weight]').value || 0
+        ),
+
+        rest: Number(
+          row.querySelector('[name=rest]').value
+        )
+      }))
+      .filter(exercise => exercise.name);
+
+    state.gymTemplates[key] = exercises;
+
+    saveState();
+    closeModal();
+    render();
+
+    notify('Scheda salvata.');
+  };
 }
 
-function exerciseEditorRow(ex, i) { return `<div class="schedule-block exercise-row"><div class="form-grid"><div class="field full"><label>Esercizio</label><input class="input" name="name" value="${esc(ex.name)}" placeholder="es. Curl manubri"></div><div class="field"><label>Serie</label><input class="input" name="sets" type="number" min="1" value="${ex.sets || 3}"></div><div class="field"><label>Modalità</label><select class="select exercise-mode" name="mode"><option value="reps" ${ex.mode === 'reps' ? 'selected' : ''}>Ripetizioni</option><option value="duration" ${ex.mode === 'duration' ? 'selected' : ''}>Durata (sec)</option></select></div><div class="field"><label class="value-label">${ex.mode === 'duration' ? 'Durata (sec)' : 'Ripetizioni'}</label><input class="input" name="value" type="number" min="1" value="${ex.value || 10}"></div><div class="field"><label>Peso (kg)</label><input class="input" name="weight" type="number" min="0" step="0.5" value="${ex.weight || 0}"></div><div class="field full"><label>Recupero dopo la serie (sec)</label><input class="input" name="rest" type="number" min="0" value="${ex.rest || 60}"></div></div></div>`; }
+function exerciseEditorRow(ex, i) {
+  const exerciseNumber = Number(i) + 1;
 
-function bindModeSelects() { document.querySelectorAll('.exercise-mode').forEach(s => s.onchange = () => { s.closest('.exercise-row').querySelector('.value-label').textContent = s.value === 'duration' ? 'Durata (sec)' : 'Ripetizioni'; }); }
+  return `
+    <div class="gym-exercise-editor exercise-row">
+
+      <div class="gym-exercise-editor-header">
+
+        <div class="gym-exercise-editor-title">
+          <div class="gym-exercise-number">
+            ${exerciseNumber}
+          </div>
+
+          <div>
+            <span>ESERCIZIO</span>
+            <strong>
+              ${ex.name ? esc(ex.name) : `Nuovo esercizio`}
+            </strong>
+          </div>
+        </div>
+
+        <button
+          class="gym-remove-exercise"
+          type="button"
+          data-remove-exercise
+          aria-label="Elimina esercizio"
+        >
+          ×
+        </button>
+
+      </div>
+
+
+      <div class="gym-main-field">
+        <label>Nome esercizio</label>
+
+        <input
+          class="input gym-name-input"
+          name="name"
+          value="${esc(ex.name)}"
+          placeholder="Es. Chest press"
+        >
+      </div>
+
+
+      <div class="gym-editor-grid">
+
+        <div class="gym-editor-field">
+          <label>Serie</label>
+
+          <input
+            class="input"
+            name="sets"
+            type="number"
+            min="1"
+            value="${ex.sets || 3}"
+          >
+        </div>
+
+
+        <div class="gym-editor-field">
+          <label>Modalità</label>
+
+          <select
+            class="select exercise-mode"
+            name="mode"
+          >
+            <option
+              value="reps"
+              ${ex.mode === 'reps' ? 'selected' : ''}
+            >
+              Ripetizioni
+            </option>
+
+            <option
+              value="duration"
+              ${ex.mode === 'duration' ? 'selected' : ''}
+            >
+              Durata
+            </option>
+          </select>
+        </div>
+
+
+        <div class="gym-editor-field">
+          <label class="value-label">
+            ${
+              ex.mode === 'duration'
+                ? 'Durata (sec)'
+                : 'Ripetizioni'
+            }
+          </label>
+
+          <input
+            class="input"
+            name="value"
+            type="number"
+            min="1"
+            value="${ex.value || 10}"
+          >
+        </div>
+
+
+        <div class="gym-editor-field">
+          <label>Peso</label>
+
+          <div class="gym-input-unit">
+            <input
+              class="input"
+              name="weight"
+              type="number"
+              min="0"
+              step="0.5"
+              value="${ex.weight || 0}"
+            >
+
+            <span>kg</span>
+          </div>
+        </div>
+
+      </div>
+
+
+      <div class="gym-rest-field">
+        <div>
+          <label>Recupero</label>
+          <span>Tempo tra una serie e la successiva</span>
+        </div>
+
+        <div class="gym-input-unit gym-rest-input">
+          <input
+            class="input"
+            name="rest"
+            type="number"
+            min="0"
+            value="${ex.rest || 60}"
+          >
+
+          <span>sec</span>
+        </div>
+      </div>
+
+    </div>
+  `;
+}
+
+function bindExerciseEditor() {
+
+  /*
+    Cambio modalità:
+    Ripetizioni ↔ Durata
+  */
+  document
+    .querySelectorAll('.exercise-mode')
+    .forEach(select => {
+
+      select.onchange = () => {
+        const row = select.closest('.exercise-row');
+
+        const label =
+          row.querySelector('.value-label');
+
+        label.textContent =
+          select.value === 'duration'
+            ? 'Durata (sec)'
+            : 'Ripetizioni';
+      };
+    });
+
+
+  /*
+    Aggiorna in tempo reale il titolo
+    della card mentre si scrive il nome.
+  */
+  document
+    .querySelectorAll('.gym-name-input')
+    .forEach(input => {
+
+      input.oninput = () => {
+        const row = input.closest('.exercise-row');
+
+        const title =
+          row.querySelector(
+            '.gym-exercise-editor-title strong'
+          );
+
+        title.textContent =
+          input.value.trim() || 'Nuovo esercizio';
+      };
+    });
+
+
+  /*
+    Eliminazione esercizio
+  */
+  document
+    .querySelectorAll('[data-remove-exercise]')
+    .forEach(button => {
+
+      button.onclick = () => {
+        const row = button.closest('.exercise-row');
+
+        row.remove();
+
+        renumberGymExercises();
+      };
+    });
+}
+
+
+function renumberGymExercises() {
+  document
+    .querySelectorAll('.exercise-row')
+    .forEach((row, index) => {
+
+      const number =
+        row.querySelector('.gym-exercise-number');
+
+      if (number) {
+        number.textContent = index + 1;
+      }
+    });
+}
 
 function startWorkout(key) {
   const ex = state.gymTemplates[key];

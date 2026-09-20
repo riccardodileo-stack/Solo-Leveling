@@ -412,7 +412,7 @@ p {
 .task-meta {
   font-size: 12px;
   color: var(--muted);
-  margin-top: 3px;
+  margin-left: 10px;
 }
 
 .task-complete .task-title {
@@ -1084,6 +1084,833 @@ p {
 
   -webkit-backdrop-filter: blur(7px);
   backdrop-filter: blur(7px);
+}
+
+/* =========================================================
+   GYM SHEETS
+   ========================================================= */
+
+.gym-library {
+  padding: 0;
+  overflow: hidden;
+}
+
+.gym-library-header {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 17px;
+  text-align: left;
+}
+
+.gym-library-title {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+}
+
+.gym-library-title h2 {
+  margin: 0;
+}
+
+.gym-library-title p {
+  margin: 3px 0 0;
+  font-size: 12px;
+}
+
+.gym-library-icon {
+  width: 45px;
+  height: 45px;
+
+  flex: 0 0 auto;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 14px;
+
+  color: var(--cyan);
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(53, 240, 255, 0.13),
+      rgba(84, 205, 255, 0.05)
+    );
+
+  border: 1px solid rgba(84, 205, 255, 0.18);
+}
+
+.gym-library-icon svg {
+  width: 24px;
+  height: 24px;
+
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.gym-chevron {
+  font-size: 27px;
+  color: var(--muted);
+
+  transform: rotate(0deg);
+
+  transition:
+    transform 0.2s ease,
+    color 0.2s ease;
+}
+
+.gym-chevron.open {
+  transform: rotate(90deg);
+  color: var(--cyan);
+}
+
+
+/* Contenuto espanso */
+
+.gym-library-content {
+  padding:
+    0
+    16px
+    16px;
+
+  border-top: 1px solid var(--line);
+}
+
+
+/* Scheda 1 / 2 / 3 */
+
+.gym-sheet-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+
+  gap: 7px;
+
+  padding: 14px 0;
+}
+
+.gym-sheet-tab {
+  border: 1px solid var(--line);
+
+  border-radius: 13px;
+
+  padding: 10px 7px;
+
+  background: rgba(255, 255, 255, 0.025);
+
+  color: var(--muted);
+
+  font-size: 12px;
+}
+
+.gym-sheet-tab.active {
+  border-color: rgba(53, 240, 255, 0.38);
+
+  color: var(--text);
+
+  background: rgba(53, 240, 255, 0.10);
+
+  box-shadow:
+    inset 0 0 18px rgba(53, 240, 255, 0.04);
+}
+
+
+/* Anteprima scheda */
+
+.gym-sheet-detail {
+  border: 1px solid var(--line);
+
+  border-radius: 18px;
+
+  padding: 14px;
+
+  background: rgba(255, 255, 255, 0.018);
+}
+
+.gym-sheet-detail-header {
+  margin-bottom: 12px;
+}
+
+.gym-sheet-number {
+  display: block;
+
+  color: var(--blue);
+
+  font-size: 10px;
+
+  font-weight: 700;
+
+  letter-spacing: 0.16em;
+
+  margin-bottom: 5px;
+}
+
+.gym-sheet-detail h3 {
+  font-size: 16px;
+}
+
+
+/* Lista esercizi */
+
+.gym-exercise-list {
+  display: flex;
+  flex-direction: column;
+
+  margin-bottom: 14px;
+}
+
+.gym-exercise-preview {
+  min-height: 58px;
+
+  display: flex;
+  align-items: center;
+
+  gap: 11px;
+
+  padding: 10px 0;
+
+  border-bottom: 1px solid var(--line);
+}
+
+.gym-exercise-preview:last-child {
+  border-bottom: 0;
+}
+
+.gym-exercise-index {
+  width: 31px;
+  height: 31px;
+
+  flex: 0 0 auto;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 10px;
+
+  color: var(--cyan);
+
+  background: rgba(53, 240, 255, 0.08);
+
+  border: 1px solid rgba(53, 240, 255, 0.13);
+
+  font-size: 12px;
+
+  font-weight: 700;
+}
+
+.gym-exercise-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.gym-exercise-copy strong {
+  display: block;
+
+  font-size: 13px;
+}
+
+.gym-exercise-copy span {
+  display: block;
+
+  margin-top: 4px;
+
+  color: var(--muted);
+
+  font-size: 11px;
+}
+
+.gym-exercise-rest {
+  flex: 0 0 auto;
+
+  color: var(--muted);
+
+  font-size: 11px;
+}
+
+
+/* Scheda vuota */
+
+.gym-empty-sheet {
+  text-align: center;
+
+  padding: 22px 12px;
+
+  margin-bottom: 12px;
+}
+
+.gym-empty-icon {
+  width: 48px;
+  height: 48px;
+
+  margin: 0 auto 10px;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 15px;
+
+  color: var(--muted);
+
+  background: rgba(255, 255, 255, 0.03);
+
+  border: 1px solid var(--line);
+}
+
+.gym-empty-icon svg {
+  width: 24px;
+  height: 24px;
+
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+}
+
+.gym-empty-sheet p {
+  margin: 0 0 4px;
+
+  color: var(--text);
+
+  font-size: 13px;
+
+  font-weight: 600;
+}
+
+.gym-empty-sheet span {
+  color: var(--muted);
+
+  font-size: 11px;
+
+  line-height: 1.45;
+}
+
+
+/* Pulsanti */
+
+.gym-sheet-actions {
+  display: flex;
+
+  gap: 8px;
+
+  margin-top: 12px;
+}
+
+.gym-sheet-actions .btn {
+  flex: 1;
+}
+
+
+/* Task palestra */
+
+.gym-task-section {
+  margin-top: 20px;
+}
+
+.gym-section-heading {
+  margin:
+    0
+    4px
+    12px;
+}
+
+.gym-section-heading h2 {
+  margin-top: 5px;
+}
+
+.gym-task-card .card-header {
+  margin-bottom: 4px;
+}
+
+/* =========================================================
+   GYM EDITOR
+   ========================================================= */
+
+.gym-editor {
+  padding-top: 2px;
+}
+
+
+/* ---------- Header editor ---------- */
+
+.gym-editor-header {
+  display: flex;
+  align-items: flex-start;
+
+  gap: 14px;
+
+  padding:
+    4px
+    2px
+    18px;
+
+  margin-bottom: 4px;
+
+  border-bottom: 1px solid var(--line);
+}
+
+.gym-editor-header h2 {
+  margin:
+    4px
+    0
+    5px;
+
+  font-size: 25px;
+}
+
+.gym-editor-header p {
+  margin: 0;
+
+  max-width: 350px;
+
+  font-size: 12px;
+
+  line-height: 1.5;
+}
+
+.gym-editor-header-icon {
+  width: 48px;
+  height: 48px;
+
+  flex: 0 0 auto;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 15px;
+
+  color: var(--cyan);
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(53, 240, 255, 0.14),
+      rgba(84, 205, 255, 0.05)
+    );
+
+  border:
+    1px solid
+    rgba(84, 205, 255, 0.22);
+
+  box-shadow:
+    inset 0 0 22px
+    rgba(53, 240, 255, 0.04);
+}
+
+.gym-editor-header-icon svg {
+  width: 25px;
+  height: 25px;
+
+  fill: none;
+  stroke: currentColor;
+
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+
+/* ---------- Lista esercizi ---------- */
+
+.gym-editor-list {
+  display: flex;
+  flex-direction: column;
+
+  gap: 12px;
+
+  margin-top: 14px;
+}
+
+
+/* ---------- Singola card esercizio ---------- */
+
+.gym-exercise-editor {
+  padding: 15px;
+
+  border-radius: 20px;
+
+  border:
+    1px solid
+    rgba(133, 209, 255, 0.14);
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.035),
+      rgba(255, 255, 255, 0.012)
+    );
+
+  box-shadow:
+    inset 0 1px 0
+    rgba(255, 255, 255, 0.025);
+}
+
+
+/* ---------- Titolo esercizio ---------- */
+
+.gym-exercise-editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 10px;
+
+  margin-bottom: 15px;
+}
+
+.gym-exercise-editor-title {
+  display: flex;
+  align-items: center;
+
+  gap: 11px;
+
+  min-width: 0;
+}
+
+.gym-exercise-editor-title > div:last-child {
+  min-width: 0;
+}
+
+.gym-exercise-editor-title span {
+  display: block;
+
+  margin-bottom: 3px;
+
+  color: var(--muted);
+
+  font-size: 9px;
+
+  font-weight: 700;
+
+  letter-spacing: 0.16em;
+}
+
+.gym-exercise-editor-title strong {
+  display: block;
+
+  max-width: 250px;
+
+  overflow: hidden;
+
+  color: var(--text);
+
+  font-size: 15px;
+
+  white-space: nowrap;
+
+  text-overflow: ellipsis;
+}
+
+
+/* Numero esercizio */
+
+.gym-exercise-number {
+  width: 36px;
+  height: 36px;
+
+  flex: 0 0 auto;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 12px;
+
+  color: var(--cyan);
+
+  background:
+    rgba(53, 240, 255, 0.09);
+
+  border:
+    1px solid
+    rgba(53, 240, 255, 0.18);
+
+  font-size: 13px;
+
+  font-weight: 700;
+}
+
+
+/* ---------- Pulsante elimina ---------- */
+
+.gym-remove-exercise {
+  width: 34px;
+  height: 34px;
+
+  flex: 0 0 auto;
+
+  display: grid;
+  place-items: center;
+
+  padding: 0;
+
+  border-radius: 11px;
+
+  border:
+    1px solid
+    rgba(255, 104, 132, 0.16);
+
+  background:
+    rgba(255, 104, 132, 0.06);
+
+  color:
+    rgba(255, 150, 168, 0.78);
+
+  font-size: 21px;
+
+  line-height: 1;
+}
+
+
+/* ---------- Nome principale ---------- */
+
+.gym-main-field {
+  display: flex;
+  flex-direction: column;
+
+  gap: 7px;
+
+  margin-bottom: 12px;
+}
+
+.gym-main-field label {
+  color: var(--muted);
+
+  font-size: 11px;
+}
+
+
+/* ---------- Griglia parametri ---------- */
+
+.gym-editor-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(2, minmax(0, 1fr));
+
+  gap: 10px;
+}
+
+.gym-editor-field {
+  min-width: 0;
+}
+
+.gym-editor-field label {
+  display: block;
+
+  margin-bottom: 6px;
+
+  color: var(--muted);
+
+  font-size: 11px;
+}
+
+
+/* ---------- Input con unità ---------- */
+
+.gym-input-unit {
+  position: relative;
+
+  display: flex;
+  align-items: center;
+}
+
+.gym-input-unit .input {
+  padding-right: 43px;
+}
+
+.gym-input-unit > span {
+  position: absolute;
+
+  right: 12px;
+
+  color: var(--muted);
+
+  font-size: 11px;
+
+  pointer-events: none;
+}
+
+
+/* ---------- Recupero ---------- */
+
+.gym-rest-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 15px;
+
+  margin-top: 12px;
+
+  padding-top: 12px;
+
+  border-top:
+    1px solid
+    rgba(133, 209, 255, 0.10);
+}
+
+.gym-rest-field label {
+  display: block;
+
+  margin-bottom: 3px;
+
+  color: var(--text);
+
+  font-size: 12px;
+
+  font-weight: 600;
+}
+
+.gym-rest-field > div:first-child > span {
+  display: block;
+
+  color: var(--muted);
+
+  font-size: 10px;
+}
+
+.gym-rest-input {
+  width: 105px;
+
+  flex: 0 0 auto;
+}
+
+
+/* ---------- Bottone aggiungi ---------- */
+
+.gym-add-exercise {
+  width: 100%;
+
+  min-height: 66px;
+
+  display: flex;
+  align-items: center;
+
+  gap: 13px;
+
+  margin-top: 14px;
+
+  padding:
+    11px
+    15px;
+
+  text-align: left;
+
+  color: var(--text);
+
+  border-radius: 18px;
+
+  border:
+    1px dashed
+    rgba(53, 240, 255, 0.28);
+
+  background:
+    rgba(53, 240, 255, 0.035);
+}
+
+.gym-add-plus {
+  width: 38px;
+  height: 38px;
+
+  flex: 0 0 auto;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 12px;
+
+  color: #06121c;
+
+  background:
+    linear-gradient(
+      135deg,
+      var(--cyan),
+      var(--blue)
+    );
+
+  font-size: 26px;
+
+  font-weight: 400;
+
+  line-height: 1;
+}
+
+.gym-add-exercise strong {
+  display: block;
+
+  font-size: 13px;
+}
+
+.gym-add-exercise small {
+  display: block;
+
+  margin-top: 3px;
+
+  color: var(--muted);
+
+  font-size: 10px;
+
+  font-weight: 400;
+}
+
+
+/* ---------- Salva ---------- */
+
+.gym-save-sheet {
+  width: 100%;
+
+  min-height: 51px;
+
+  margin-top: 10px;
+
+  font-size: 14px;
+}
+
+
+/* ---------- Scheda vuota ---------- */
+
+.gym-editor-empty {
+  padding:
+    28px
+    15px;
+
+  text-align: center;
+
+  border-radius: 18px;
+
+  border:
+    1px solid var(--line);
+
+  background:
+    rgba(255, 255, 255, 0.015);
+}
+
+.gym-editor-empty strong {
+  display: block;
+
+  margin-top: 5px;
+
+  color: var(--text);
+
+  font-size: 14px;
+}
+
+.gym-editor-empty p {
+  margin:
+    5px
+    auto
+    0;
+
+  max-width: 280px;
+
+  font-size: 11px;
 }
 
 @media (min-width: 700px) {
