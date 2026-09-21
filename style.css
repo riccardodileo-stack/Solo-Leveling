@@ -415,6 +415,20 @@ p {
   margin-left: 10px;
 }
 
+.task-weekday {
+  flex: 0 0 auto;
+
+  margin-left: 10px;
+
+  color: var(--blue);
+
+  font-size: 12px;
+  font-weight: 600;
+
+  text-align: right;
+  white-space: nowrap;
+}
+
 .task-complete .task-title {
   color: var(--muted);
   text-decoration: line-through;
