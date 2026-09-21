@@ -3680,16 +3680,6 @@ function openWorkoutScreen() {
 }
 
 function closeWorkoutScreen() {
-  if (workoutAnimationFrame) {
-    cancelAnimationFrame(
-      workoutAnimationFrame
-    );
-
-    workoutAnimationFrame =
-      null;
-  }
-
-
   const screen =
     document.getElementById(
       'workout-fullscreen'
@@ -3698,7 +3688,6 @@ function closeWorkoutScreen() {
   if (screen) {
     screen.remove();
   }
-
 
   document.body.classList.remove(
     'workout-mode'
@@ -3737,13 +3726,23 @@ function renderWorkoutScreen() {
       ''
     );
 
+
+  /*
+    Se il workout è terminato:
+    progressione = 100%.
+
+    Altrimenti mostriamo la progressione
+    sulla base dell'esercizio corrente.
+  */
   const progress =
-    exercises.length
-      ? (
-          workout.exerciseIndex /
-          exercises.length
-        ) * 100
-      : 0;
+    workout.phase === 'complete'
+      ? 100
+      : exercises.length
+        ? (
+            workout.exerciseIndex /
+            exercises.length
+          ) * 100
+        : 0;
 
 
   screen.innerHTML = `
@@ -3769,10 +3768,12 @@ function renderWorkoutScreen() {
 
         <div class="workout-exercise-counter">
           ${
-            Math.min(
-              workout.exerciseIndex + 1,
-              exercises.length
-            )
+            workout.phase === 'complete'
+              ? exercises.length
+              : Math.min(
+                  workout.exerciseIndex + 1,
+                  exercises.length
+                )
           }
           /
           ${exercises.length}
@@ -3780,6 +3781,8 @@ function renderWorkoutScreen() {
 
       </header>
 
+
+      <!-- PROGRESS BAR -->
 
       <div class="workout-top-progress">
 
@@ -3803,28 +3806,34 @@ function renderWorkoutScreen() {
       </main>
 
 
-      <!-- BARRA INFERIORE -->
+      ${
+        workout.phase !== 'complete'
+          ? `
+              <!-- BARRA INFERIORE -->
 
-      <footer class="workout-fullscreen-footer">
+              <footer class="workout-fullscreen-footer">
 
-        <button
-          type="button"
-          class="workout-footer-button secondary"
-          data-workout-suspend
-        >
-          Sospendi allenamento
-        </button>
+                <button
+                  type="button"
+                  class="workout-footer-button secondary"
+                  data-workout-suspend
+                >
+                  Sospendi allenamento
+                </button>
 
 
-        <button
-          type="button"
-          class="workout-footer-button danger"
-          data-workout-finish
-        >
-          Fine allenamento
-        </button>
+                <button
+                  type="button"
+                  class="workout-footer-button danger"
+                  data-workout-finish
+                >
+                  Fine allenamento
+                </button>
 
-      </footer>
+              </footer>
+            `
+          : ''
+      }
 
     </div>
   `;
@@ -4177,7 +4186,7 @@ function bindWorkoutScreen() {
 
 
   /*
-    SOSPENDI
+    SOSPENDI ALLENAMENTO
   */
   const suspend =
     document.querySelector(
@@ -4191,7 +4200,7 @@ function bindWorkoutScreen() {
 
 
   /*
-    RIPRENDI
+    RIPRENDI ALLENAMENTO
   */
   const resume =
     document.querySelector(
@@ -4205,23 +4214,27 @@ function bindWorkoutScreen() {
 
 
   /*
-    FINE ALLENAMENTO MANUALE
+    FINE ALLENAMENTO ANTICIPATA
+    = pulsante rosso
   */
-  document
-    .querySelectorAll(
+  const manualFinish =
+    document.querySelector(
       '[data-workout-finish]'
-    )
-    .forEach(button => {
-      button.onclick =
-        () =>
-          finishWorkoutSession(
-            false
-          );
-    });
+    );
+
+  if (manualFinish) {
+    manualFinish.onclick =
+      () => {
+        finishWorkoutSession(
+          false
+        );
+      };
+  }
 
 
   /*
     FINE ALLENAMENTO NATURALE
+    = grande pulsante azzurro
   */
   const complete =
     document.querySelector(
@@ -4230,10 +4243,11 @@ function bindWorkoutScreen() {
 
   if (complete) {
     complete.onclick =
-      () =>
+      () => {
         finishWorkoutSession(
           true
         );
+      };
   }
 }
 
@@ -4375,14 +4389,13 @@ function finishWorkoutSession(
 
 
   /*
-    Se viene premuto dal bottone
-    fisso in basso mentre il workout
-    non è ancora finito, chiediamo conferma.
+    Se premi il pulsante rosso
+    prima della fine naturale,
+    chiediamo conferma.
   */
   if (
     !naturallyCompleted &&
-    workout.phase !==
-    'complete'
+    workout.phase !== 'complete'
   ) {
     const confirmed =
       confirm(
@@ -4399,6 +4412,10 @@ function finishWorkoutSession(
     workout.key;
 
 
+  /*
+    Segniamo come completato
+    il task palestra.
+  */
   state.records[
     recordKey(
       todayISO(),
@@ -4406,20 +4423,31 @@ function finishWorkoutSession(
     )
   ] = {
     done: true,
-    details:
-      'Workout guidato'
+    details: 'Workout guidato'
   };
 
 
+  /*
+    Eliminiamo la sessione attiva.
+  */
   state.activeWorkout =
     null;
 
 
   saveState();
 
+
+  /*
+    Chiudiamo la schermata fullscreen.
+  */
   closeWorkoutScreen();
 
+
+  /*
+    Ridisegniamo l'app normale.
+  */
   render();
+
 
   notify(
     'Allenamento completato.'
