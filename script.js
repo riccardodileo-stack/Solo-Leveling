@@ -162,6 +162,35 @@ function targetWeight(heightCm) { const m = heightCm / 100; return BMI_TARGET * 
 
 function bmi(weight, heightCm) { const m = heightCm / 100; return weight / (m * m); }
 
+function heartRateZoneFromBpm(bpm) {
+  const age =
+    state.settings.initial.age;
+
+  const maxHeartRate =
+    208 - 0.7 * age;
+
+  const percentage =
+    bpm / maxHeartRate;
+
+  if (percentage < 0.60) {
+    return 1;
+  }
+
+  if (percentage < 0.70) {
+    return 2;
+  }
+
+  if (percentage < 0.80) {
+    return 3;
+  }
+
+  if (percentage < 0.90) {
+    return 4;
+  }
+
+  return 5;
+}
+
 function bodyShapeScore(weight, heightCm) { return round1(clamp(BODY_MAX * (1 - Math.abs(weight - targetWeight(heightCm)) / 30), 0, BODY_MAX)); }
 
 function weekFrequency(schedule) { return schedule.mode === 'days' ? schedule.days.length : Number(schedule.perWeek || 0); }
@@ -593,21 +622,214 @@ function scheduleFields(key, data) {
 
 function renderSetup() {
   const schedules = defaultSchedules();
-  return `<main class="setup-shell">
-  <div class="setup-intro"><div class="eyebrow">Awakening setup</div><h1>Solo Leveling</h1></div>
-  <div class="lock-banner">🔒 Dopo lo Start i valori iniziali non saranno modificabili. Potrai azzerare tutto solo dal comando Restart protetto da password.</div>
-  <form id="setupForm">
-      <div class="card emphasis"><fieldset class="fieldset"><legend>Statistiche iniziali</legend><div class="form-grid">
-    <div class="field"><label>Endurance / 99</label><input class="input" type="number" name="endurance" min="0" max="99" value="20" required></div>
-    <div class="field"><label>Strength / 99</label><input class="input" type="number" name="strength" min="0" max="99" value="20" required></div>
-    <div class="field"><label>Altezza (cm)</label><input class="input" type="number" name="height" min="100" max="240" step="0.1" required></div>
-    <div class="field"><label>Peso iniziale (kg)</label><input class="input" type="number" name="weight" min="25" max="300" step="0.1" required></div>
-      </div><p class="helper">Knowledge = 25% Italiano + 50% Inglese + 25% Giapponese. Body Shape è calcolata automaticamente sul peso forma (BMI target 22).</p></fieldset></div>
-      <div class="card"><fieldset class="fieldset"><legend>Tempo di level-up</legend><div class="field"><label>Orizzonte dell'obiettivo</label><select class="select" name="levelMonths"><option value="6">6 mesi</option><option value="12" selected>1 anno</option><option value="18">1 anno e mezzo</option><option value="24">2 anni</option></select></div></fieldset></div>
-      <div class="card"><fieldset class="fieldset"><legend>Programmazione task</legend>${Object.keys(TASKS).map(k => scheduleFields(k, schedules[k])).join('')}</fieldset></div>
-      <button class="btn" style="width:100%" type="submit">START — Avvia percorso</button>
-  </form>
-  </main>`;
+
+  return `
+    <main class="setup-shell">
+
+      <div class="setup-intro">
+        <div class="eyebrow">
+          Awakening setup
+        </div>
+
+        <h1>
+          Solo Leveling
+        </h1>
+      </div>
+
+
+      <div class="lock-banner">
+        🔒 Dopo lo Start i valori iniziali non saranno modificabili.
+        Potrai azzerare tutto solo dal comando Restart protetto da password.
+      </div>
+
+
+      <form id="setupForm">
+
+        <div class="card emphasis">
+
+          <fieldset class="fieldset">
+
+            <legend>
+              Statistiche iniziali
+            </legend>
+
+            <div class="form-grid">
+
+              <div class="field">
+                <label>
+                  Endurance / 99
+                </label>
+
+                <input
+                  class="input"
+                  type="number"
+                  name="endurance"
+                  min="0"
+                  max="99"
+                  value="20"
+                  required
+                >
+              </div>
+
+
+              <div class="field">
+                <label>
+                  Strength / 99
+                </label>
+
+                <input
+                  class="input"
+                  type="number"
+                  name="strength"
+                  min="0"
+                  max="99"
+                  value="20"
+                  required
+                >
+              </div>
+
+
+              <div class="field">
+                <label>
+                  Età
+                </label>
+
+                <input
+                  class="input"
+                  type="number"
+                  name="age"
+                  min="10"
+                  max="100"
+                  required
+                >
+              </div>
+
+
+              <div class="field">
+                <label>
+                  Altezza (cm)
+                </label>
+
+                <input
+                  class="input"
+                  type="number"
+                  name="height"
+                  min="100"
+                  max="240"
+                  step="0.1"
+                  required
+                >
+              </div>
+
+
+              <div class="field">
+                <label>
+                  Peso iniziale (kg)
+                </label>
+
+                <input
+                  class="input"
+                  type="number"
+                  name="weight"
+                  min="25"
+                  max="300"
+                  step="0.1"
+                  required
+                >
+              </div>
+
+            </div>
+
+            <p class="helper">
+              Body Shape è calcolata automaticamente sul peso forma
+              con BMI target 22.
+            </p>
+
+          </fieldset>
+
+        </div>
+
+
+        <div class="card">
+
+          <fieldset class="fieldset">
+
+            <legend>
+              Tempo di level-up
+            </legend>
+
+            <div class="field">
+
+              <label>
+                Orizzonte dell'obiettivo
+              </label>
+
+              <select
+                class="select"
+                name="levelMonths"
+              >
+                <option value="6">
+                  6 mesi
+                </option>
+
+                <option
+                  value="12"
+                  selected
+                >
+                  1 anno
+                </option>
+
+                <option value="18">
+                  1 anno e mezzo
+                </option>
+
+                <option value="24">
+                  2 anni
+                </option>
+              </select>
+
+            </div>
+
+          </fieldset>
+
+        </div>
+
+
+        <div class="card">
+
+          <fieldset class="fieldset">
+
+            <legend>
+              Programmazione task
+            </legend>
+
+            ${Object.keys(TASKS)
+              .map(
+                key =>
+                  scheduleFields(
+                    key,
+                    schedules[key]
+                  )
+              )
+              .join('')}
+
+          </fieldset>
+
+        </div>
+
+
+        <button
+          class="btn"
+          style="width:100%"
+          type="submit"
+        >
+          START — Avvia percorso
+        </button>
+
+      </form>
+
+    </main>
+  `;
 }
 
 function bindSetup() {
@@ -640,6 +862,10 @@ function bindSetup() {
 
           strength: Number(
             fd.get('strength')
+          ),
+
+          age: Number(
+            fd.get('age')
           ),
 
           weight,
@@ -817,10 +1043,21 @@ function toggleTask(task, date, checked) {
     openTennisModal(date, task);
     return;
   }
-  if (!checked && task === 'run')
-    state.runLogs = state.runLogs.filter(l => l.date !== date);
-  if (!checked && task === 'tennis')
-    state.tennisLogs = state.tennisLogs.filter(l => l.date !== date);
+  if (!checked && task === 'run') {
+    state.runLogs =
+      state.runLogs.filter(
+        l =>(l.scheduledDate || l.date) !== date); 
+  }
+  if (!checked && task === 'tennis') {
+    state.tennisLogs =
+      state.tennisLogs.filter(
+        log =>
+          (
+            log.scheduledDate ||
+            log.date
+          ) !== date
+      );
+  }
   state.records[recordKey(date, task)] = { ...getRecord(date, task), done: checked, details: checked ? getRecord(date, task).details : '' };
   saveState();
   render();
@@ -913,54 +1150,35 @@ function sportPanel(tab) {
       <div class="card emphasis">
 
         <div class="card-header">
+
           <div>
-            <h2>Allenamenti tennis</h2>
-            <p>Contributo massimo Strength: +5</p>
+            <h2>
+              Allenamenti tennis
+            </h2>
+
+            <p>
+              Contributo massimo Strength: +5
+            </p>
           </div>
 
           <span class="badge">
-            +${round1(stats.tennisIncrement)} / sessione
+            +${round1(
+              stats.tennisIncrement
+            )} / sessione
           </span>
+
         </div>
 
-        ${upcomingGroupTasks('tennis')}
-      </div>
-
-      <div class="card">
-
-        <h2>Partite registrate</h2>
-
-        ${
-          state.tennisLogs.length
-            ? state.tennisLogs
-                .slice()
-                .reverse()
-                .map(
-                  log => `
-                    <div class="list-item">
-                      <div class="item-copy">
-                        <strong>
-                          ${esc(log.result)}
-                        </strong>
-
-                        <span>
-                          ${formatDate(log.date)}
-                          ·
-                          ${esc(log.surface)}
-                        </span>
-                      </div>
-                    </div>
-                  `
-                )
-                .join('')
-            : `
-                <div class="empty">
-                  Nessun allenamento completato.
-                </div>
-              `
-        }
+        ${upcomingGroupTasks(
+          'tennis'
+        )}
 
       </div>
+
+
+      ${renderTennisStats()}
+
+      ${renderTennisHistory()}
     `;
   }
 
@@ -1361,13 +1579,1474 @@ function bindFitness() {
 // ============================================================
 
 function openRunModal(date, task) {
-  openModal(`<h2>Registra corsa</h2><p>${formatDate(date)}</p><form id="runForm"><div class="form-grid"><div class="field"><label>Km percorsi</label><input class="input" name="km" type="number" min="0.1" step="0.01" required></div><div class="field"><label>BPM medi</label><input class="input" name="bpm" type="number" min="40" max="230" required></div><div class="field"><label>Passo medio (min/km, es. 5.30)</label><input class="input" name="pace" type="number" min="2" max="20" step="0.01" required></div><div class="field"><label>Zona cardio</label><select class="select" name="zone"><option value="1">Zona 1</option><option value="2">Zona 2</option><option value="3" selected>Zona 3</option><option value="4">Zona 4</option><option value="5">Zona 5</option></select></div></div><button class="btn" style="width:100%">Completa sessione</button></form>`);
-  document.getElementById('runForm').onsubmit = e => { e.preventDefault(); const fd = new FormData(e.target); const log = { date, km: Number(fd.get('km')), bpm: Number(fd.get('bpm')), pace: Number(fd.get('pace')), zone: Number(fd.get('zone')) }; state.runLogs = state.runLogs.filter(l => l.date !== date); state.runLogs.push(log); state.runLogs.sort((a, b) => a.date.localeCompare(b.date)); state.records[recordKey(date, task)] = { done: true, details: `${log.km} km · ${log.pace} min/km` }; saveState(); closeModal(); render(); notify('Corsa registrata.'); };
+  const scheduledDate = date;
+  const completionDate = todayISO();
+
+  openModal(`
+    <h2>Registra corsa</h2>
+
+    <p>
+      ${formatDate(completionDate)}
+    </p>
+
+    <form id="runForm">
+
+      <div class="form-grid">
+
+        <div class="field">
+          <label>
+            Km percorsi
+          </label>
+
+          <input
+            class="input"
+            name="km"
+            type="number"
+            min="0.1"
+            step="0.01"
+            required
+          >
+        </div>
+
+
+        <div class="field">
+          <label>
+            BPM medi
+          </label>
+
+          <input
+            class="input"
+            name="bpm"
+            type="number"
+            min="40"
+            max="230"
+            required
+          >
+        </div>
+
+
+        <div class="field">
+          <label>
+            Passo medio (min/km, es. 5.30)
+          </label>
+
+          <input
+            class="input"
+            name="pace"
+            type="number"
+            min="2"
+            max="20"
+            step="0.01"
+            required
+          >
+        </div>
+
+      </div>
+
+
+      <button
+        class="btn"
+        style="width:100%"
+      >
+        Completa sessione
+      </button>
+
+    </form>
+  `);
+
+
+  document
+    .getElementById('runForm')
+    .onsubmit = event => {
+
+      event.preventDefault();
+
+      const fd =
+        new FormData(
+          event.target
+        );
+
+      const bpm =
+        Number(
+          fd.get('bpm')
+        );
+
+
+      const log = {
+
+        /*
+          Data reale in cui hai effettuato la corsa.
+          È questa che viene utilizzata nei grafici.
+        */
+        date: completionDate,
+
+        /*
+          Giorno al quale apparteneva il task.
+          Serve per sapere quale task è stato completato.
+        */
+        scheduledDate,
+
+        km:
+          Number(
+            fd.get('km')
+          ),
+
+        bpm,
+
+        pace:
+          Number(
+            fd.get('pace')
+          ),
+
+        zone:
+          heartRateZoneFromBpm(bpm)
+      };
+
+
+      /*
+        Se registri nuovamente lo stesso task,
+        sostituiamo la precedente registrazione.
+      */
+      state.runLogs =
+        state.runLogs.filter(
+          log =>
+            (log.scheduledDate || log.date) !==
+            scheduledDate
+        );
+
+
+      state.runLogs.push(
+        log
+      );
+
+
+      state.runLogs.sort(
+        (a, b) =>
+          a.date.localeCompare(
+            b.date
+          )
+      );
+
+
+      /*
+        Il task resta associato alla sua data programmata.
+      */
+      state.records[
+        recordKey(
+          scheduledDate,
+          task
+        )
+      ] = {
+        done: true,
+
+        details:
+          `${log.km} km · ${log.pace} min/km`
+      };
+
+
+      saveState();
+
+      closeModal();
+
+      render();
+
+      notify(
+        `Corsa registrata · Zona ${log.zone}`
+      );
+    };
+}
+
+function tennisActionLabel(action) {
+  const labels = {
+    continue_open:
+      'Partita precedente continuata',
+
+    close_open:
+      'Partita precedente conclusa',
+
+    start_open:
+      'Partita nuova iniziata',
+
+    new_complete:
+      'Nuova partita completa',
+
+    close_and_start:
+      'Fine partita precedente e inizio successiva'
+  };
+
+  return labels[action] || 'Allenamento tennis';
+}
+
+
+function buildTennisMatches() {
+  const logs =
+    state.tennisLogs
+      .slice()
+      .sort((a, b) => {
+        const timeA =
+          a.timestamp || 0;
+
+        const timeB =
+          b.timestamp || 0;
+
+        if (timeA !== timeB) {
+          return timeA - timeB;
+        }
+
+        return a.date.localeCompare(
+          b.date
+        );
+      });
+
+
+  const matches = [];
+
+  let openMatch = null;
+  let sequence = 0;
+
+
+  logs.forEach(log => {
+
+    /*
+      Compatibilità con i vecchi log tennis
+      salvati prima di questa modifica.
+    */
+    if (!log.action) {
+      matches.push({
+        id:
+          `legacy_${sequence++}`,
+
+        surface:
+          log.surface || '—',
+
+        startedDate:
+          log.date,
+
+        lastDate:
+          log.date,
+
+        status:
+          'legacy',
+
+        currentResult:
+          log.result || '',
+
+        finalResult:
+          log.result || '',
+
+        outcome:
+          null
+      });
+
+      return;
+    }
+
+
+    if (
+      log.action ===
+      'start_open'
+    ) {
+      openMatch = {
+        id:
+          `match_${sequence++}`,
+
+        surface:
+          log.surface,
+
+        startedDate:
+          log.date,
+
+        lastDate:
+          log.date,
+
+        status:
+          'open',
+
+        currentResult:
+          log.updatedResult,
+
+        finalResult:
+          null,
+
+        outcome:
+          null
+      };
+
+      matches.push(
+        openMatch
+      );
+    }
+
+
+    if (
+      log.action ===
+      'continue_open' &&
+      openMatch
+    ) {
+      openMatch.currentResult =
+        log.updatedResult;
+
+      openMatch.lastDate =
+        log.date;
+    }
+
+
+    if (
+      log.action ===
+      'close_open' &&
+      openMatch
+    ) {
+      openMatch.currentResult =
+        log.finalResult;
+
+      openMatch.finalResult =
+        log.finalResult;
+
+      openMatch.outcome =
+        log.outcome;
+
+      openMatch.status =
+        'completed';
+
+      openMatch.lastDate =
+        log.date;
+
+      openMatch = null;
+    }
+
+
+    if (
+      log.action ===
+      'new_complete'
+    ) {
+      matches.push({
+        id:
+          `match_${sequence++}`,
+
+        surface:
+          log.surface,
+
+        startedDate:
+          log.date,
+
+        lastDate:
+          log.date,
+
+        status:
+          'completed',
+
+        currentResult:
+          log.finalResult,
+
+        finalResult:
+          log.finalResult,
+
+        outcome:
+          log.outcome
+      });
+    }
+
+
+    if (
+      log.action ===
+      'close_and_start'
+    ) {
+
+      /*
+        Chiudiamo la partita precedente.
+      */
+      if (openMatch) {
+        openMatch.currentResult =
+          log.previousFinalResult;
+
+        openMatch.finalResult =
+          log.previousFinalResult;
+
+        openMatch.outcome =
+          log.previousOutcome;
+
+        openMatch.status =
+          'completed';
+
+        openMatch.lastDate =
+          log.date;
+      }
+
+
+      /*
+        E apriamo immediatamente
+        la nuova partita.
+      */
+      openMatch = {
+        id:
+          `match_${sequence++}`,
+
+        surface:
+          log.newSurface,
+
+        startedDate:
+          log.date,
+
+        lastDate:
+          log.date,
+
+        status:
+          'open',
+
+        currentResult:
+          log.newUpdatedResult,
+
+        finalResult:
+          null,
+
+        outcome:
+          null
+      };
+
+      matches.push(
+        openMatch
+      );
+    }
+  });
+
+
+  return matches;
+}
+
+
+function getOpenTennisMatch() {
+  return (
+    buildTennisMatches()
+      .find(
+        match =>
+          match.status ===
+          'open'
+      ) || null
+  );
+}
+
+
+function getTennisStats() {
+  const matches =
+    buildTennisMatches();
+
+  const completed =
+    matches.filter(
+      match =>
+        match.status ===
+          'completed' &&
+        (
+          match.outcome === 'win' ||
+          match.outcome === 'loss'
+        )
+    );
+
+
+  const wins =
+    completed.filter(
+      match =>
+        match.outcome === 'win'
+    ).length;
+
+  const losses =
+    completed.filter(
+      match =>
+        match.outcome === 'loss'
+    ).length;
+
+
+  const surfaces = {
+    'Terra rossa': {
+      wins: 0,
+      losses: 0,
+      total: 0
+    },
+
+    'Cemento': {
+      wins: 0,
+      losses: 0,
+      total: 0
+    },
+
+    'Sintetico': {
+      wins: 0,
+      losses: 0,
+      total: 0
+    }
+  };
+
+
+  completed.forEach(match => {
+    if (!surfaces[match.surface]) {
+      surfaces[match.surface] = {
+        wins: 0,
+        losses: 0,
+        total: 0
+      };
+    }
+
+    surfaces[match.surface].total++;
+
+    if (
+      match.outcome === 'win'
+    ) {
+      surfaces[
+        match.surface
+      ].wins++;
+    } else {
+      surfaces[
+        match.surface
+      ].losses++;
+    }
+  });
+
+
+  const preferred =
+    Object.entries(surfaces)
+      .filter(
+        ([, value]) =>
+          value.total > 0
+      )
+      .sort(
+        (a, b) => {
+
+          const winRateA =
+            a[1].wins /
+            a[1].total;
+
+          const winRateB =
+            b[1].wins /
+            b[1].total;
+
+          /*
+            Prima criterio:
+            win rate più alto
+          */
+          if (
+            winRateB !==
+            winRateA
+          ) {
+            return (
+              winRateB -
+              winRateA
+            );
+          }
+
+          /*
+            A parità di win rate:
+            preferiamo la superficie
+            con più partite giocate
+          */
+          return (
+            b[1].total -
+            a[1].total
+          );
+        }
+      )[0]?.[0] || '—';
+
+
+  return {
+    wins,
+    losses,
+
+    total:
+      completed.length,
+
+    winRate:
+      completed.length
+        ? Math.round(
+            wins /
+            completed.length *
+            100
+          )
+        : 0,
+
+    surfaces,
+    preferred
+  };
 }
 
 function openTennisModal(date, task) {
-  openModal(`<h2>Registra tennis</h2><form id="tennisForm"><div class="field"><label>Tipo di campo</label><select class="select" name="surface"><option>Terra rossa</option><option>Cemento</option><option>Sintetico</option></select></div><div class="field"><label>Risultato / note</label><input class="input" name="result" placeholder="es. Vittoria 6-4, 6-3" required></div><button class="btn" style="width:100%">Completa allenamento</button></form>`);
-  document.getElementById('tennisForm').onsubmit = e => { e.preventDefault(); const fd = new FormData(e.target); const log = { date, surface: fd.get('surface'), result: fd.get('result') }; state.tennisLogs = state.tennisLogs.filter(l => l.date !== date); state.tennisLogs.push(log); state.records[recordKey(date, task)] = { done: true, details: log.surface }; saveState(); closeModal(); render(); notify('Tennis registrato.'); };
+  const openMatch =
+    getOpenTennisMatch();
+
+  const completionDate =
+    todayISO();
+
+
+  /*
+    Mostriamo soltanto le opzioni
+    che hanno senso nello stato attuale.
+  */
+
+  const actions =
+    openMatch
+      ? [
+          {
+            key:
+              'continue_open',
+
+            title:
+              'Partita precedente continuata',
+
+            text:
+              'La partita rimane ancora aperta.'
+          },
+
+          {
+            key:
+              'close_open',
+
+            title:
+              'Partita precedente conclusa',
+
+            text:
+              'La partita aperta viene conclusa.'
+          },
+
+          {
+            key:
+              'close_and_start',
+
+            title:
+              'Fine partita precedente e inizio successiva',
+
+            text:
+              'Concludi la partita aperta e ne inizi subito una nuova.'
+          }
+        ]
+      : [
+          {
+            key:
+              'start_open',
+
+            title:
+              'Partita nuova iniziata',
+
+            text:
+              'Inizi una nuova partita che rimane aperta.'
+          },
+
+          {
+            key:
+              'new_complete',
+
+            title:
+              'Nuova partita completa',
+
+            text:
+              'Inizi e concludi una nuova partita nello stesso allenamento.'
+          }
+        ];
+
+
+  openModal(`
+    <div class="tennis-editor">
+
+      <div class="eyebrow">
+        Tennis session
+      </div>
+
+      <h2>
+        Registra allenamento
+      </h2>
+
+      <p>
+        ${formatDate(
+          completionDate
+        )}
+      </p>
+
+
+      ${
+        openMatch
+          ? `
+              <div class="tennis-active-match">
+
+                <span>
+                  PARTITA APERTA
+                </span>
+
+                <strong>
+                  ${
+                    esc(
+                      openMatch.currentResult
+                    ) ||
+                    'Risultato non inserito'
+                  }
+                </strong>
+
+                <small>
+                  ${esc(
+                    openMatch.surface
+                  )}
+                </small>
+
+              </div>
+            `
+          : ''
+      }
+
+
+      <div class="tennis-action-list">
+
+        ${actions.map(
+          action => `
+            <button
+              type="button"
+              class="tennis-action-option"
+              data-tennis-action="${action.key}"
+            >
+
+              <strong>
+                ${action.title}
+              </strong>
+
+              <span>
+                ${action.text}
+              </span>
+
+            </button>
+          `
+        ).join('')}
+
+      </div>
+
+
+      <div
+        id="tennisActionFields"
+        class="tennis-action-fields"
+      ></div>
+
+    </div>
+  `);
+
+
+  document
+    .querySelectorAll(
+      '[data-tennis-action]'
+    )
+    .forEach(button => {
+
+      button.onclick = () => {
+
+        document
+          .querySelectorAll(
+            '[data-tennis-action]'
+          )
+          .forEach(item =>
+            item.classList.remove(
+              'active'
+            )
+          );
+
+
+        button.classList.add(
+          'active'
+        );
+
+
+        const action =
+          button.dataset.tennisAction;
+
+
+        document
+          .getElementById(
+            'tennisActionFields'
+          )
+          .innerHTML =
+            tennisActionFields(
+              action,
+              openMatch
+            );
+
+
+        bindTennisActionForm(
+          action,
+          date,
+          task
+        );
+      };
+    });
+}
+
+function tennisSurfaceField(
+  name,
+  label = 'Tipo di campo'
+) {
+  return `
+    <div class="field">
+
+      <label>
+        ${label}
+      </label>
+
+      <select
+        class="select"
+        name="${name}"
+        required
+      >
+        <option value="Terra rossa">
+          Terra rossa
+        </option>
+
+        <option value="Cemento">
+          Cemento
+        </option>
+
+        <option value="Sintetico">
+          Sintetico
+        </option>
+      </select>
+
+    </div>
+  `;
+}
+
+
+function tennisOutcomeField(
+  name,
+  label = 'Esito partita'
+) {
+  return `
+    <div class="field">
+
+      <label>
+        ${label}
+      </label>
+
+      <div class="tennis-outcome-choice">
+
+        <label>
+          <input
+            type="radio"
+            name="${name}"
+            value="win"
+            required
+          >
+
+          <span>
+            Vittoria
+          </span>
+        </label>
+
+
+        <label>
+          <input
+            type="radio"
+            name="${name}"
+            value="loss"
+            required
+          >
+
+          <span>
+            Sconfitta
+          </span>
+        </label>
+
+      </div>
+
+    </div>
+  `;
+}
+
+
+function tennisActionFields(
+  action,
+  openMatch
+) {
+
+  let fields = '';
+
+
+  if (
+    action ===
+    'continue_open'
+  ) {
+    fields = `
+      <div class="field">
+
+        <label>
+          Inserisci il risultato aggiornato
+        </label>
+
+        <input
+          class="input"
+          name="updatedResult"
+          value="${esc(
+            openMatch?.currentResult || ''
+          )}"
+          placeholder="Es. 6-4, 3-2"
+          required
+        >
+
+      </div>
+    `;
+  }
+
+
+  if (
+    action ===
+    'close_open'
+  ) {
+    fields = `
+      <div class="field">
+
+        <label>
+          Inserisci il risultato finale della partita
+        </label>
+
+        <input
+          class="input"
+          name="finalResult"
+          value="${esc(
+            openMatch?.currentResult || ''
+          )}"
+          placeholder="Es. 6-4, 6-3"
+          required
+        >
+
+      </div>
+
+      ${tennisOutcomeField(
+        'outcome'
+      )}
+    `;
+  }
+
+
+  if (
+    action ===
+    'start_open'
+  ) {
+    fields = `
+      ${tennisSurfaceField(
+        'surface'
+      )}
+
+      <div class="field">
+
+        <label>
+          Inserisci il risultato aggiornato
+        </label>
+
+        <input
+          class="input"
+          name="updatedResult"
+          placeholder="Es. 6-4, 2-1"
+          required
+        >
+
+      </div>
+    `;
+  }
+
+
+  if (
+    action ===
+    'new_complete'
+  ) {
+    fields = `
+      ${tennisSurfaceField(
+        'surface'
+      )}
+
+      <div class="field">
+
+        <label>
+          Inserisci il risultato finale della partita
+        </label>
+
+        <input
+          class="input"
+          name="finalResult"
+          placeholder="Es. 6-4, 6-3"
+          required
+        >
+
+      </div>
+
+      ${tennisOutcomeField(
+        'outcome'
+      )}
+    `;
+  }
+
+
+  if (
+    action ===
+    'close_and_start'
+  ) {
+    fields = `
+      <div class="tennis-form-section">
+
+        <span class="tennis-form-section-title">
+          PARTITA PRECEDENTE
+        </span>
+
+        <div class="field">
+
+          <label>
+            Inserisci il risultato finale
+          </label>
+
+          <input
+            class="input"
+            name="previousFinalResult"
+            value="${esc(
+              openMatch?.currentResult || ''
+            )}"
+            placeholder="Es. 6-4, 6-3"
+            required
+          >
+
+        </div>
+
+        ${tennisOutcomeField(
+          'previousOutcome'
+        )}
+
+      </div>
+
+
+      <div class="tennis-form-section">
+
+        <span class="tennis-form-section-title">
+          NUOVA PARTITA
+        </span>
+
+        ${tennisSurfaceField(
+          'newSurface',
+          'Tipo di campo nuova partita'
+        )}
+
+        <div class="field">
+
+          <label>
+            Inserisci il risultato aggiornato
+          </label>
+
+          <input
+            class="input"
+            name="newUpdatedResult"
+            placeholder="Es. 3-2"
+            required
+          >
+
+        </div>
+
+      </div>
+    `;
+  }
+
+
+  return `
+    <form id="tennisForm">
+
+      ${fields}
+
+      <button
+        class="btn"
+        style="width:100%"
+      >
+        Salva allenamento
+      </button>
+
+    </form>
+  `;
+}
+
+function bindTennisActionForm(
+  action,
+  scheduledDate,
+  task
+) {
+  const form =
+    document.getElementById(
+      'tennisForm'
+    );
+
+  if (!form) {
+    return;
+  }
+
+
+  form.onsubmit = event => {
+    event.preventDefault();
+
+    const fd =
+      new FormData(
+        event.target
+      );
+
+
+    const log = {
+      action,
+
+      date:
+        todayISO(),
+
+      scheduledDate,
+
+      timestamp:
+        Date.now()
+    };
+
+
+    if (
+      action ===
+      'continue_open'
+    ) {
+      log.updatedResult =
+        fd.get(
+          'updatedResult'
+        );
+    }
+
+
+    if (
+      action ===
+      'close_open'
+    ) {
+      log.finalResult =
+        fd.get(
+          'finalResult'
+        );
+
+      log.outcome =
+        fd.get(
+          'outcome'
+        );
+    }
+
+
+    if (
+      action ===
+      'start_open'
+    ) {
+      log.surface =
+        fd.get(
+          'surface'
+        );
+
+      log.updatedResult =
+        fd.get(
+          'updatedResult'
+        );
+    }
+
+
+    if (
+      action ===
+      'new_complete'
+    ) {
+      log.surface =
+        fd.get(
+          'surface'
+        );
+
+      log.finalResult =
+        fd.get(
+          'finalResult'
+        );
+
+      log.outcome =
+        fd.get(
+          'outcome'
+        );
+    }
+
+
+    if (
+      action ===
+      'close_and_start'
+    ) {
+      log.previousFinalResult =
+        fd.get(
+          'previousFinalResult'
+        );
+
+      log.previousOutcome =
+        fd.get(
+          'previousOutcome'
+        );
+
+      log.newSurface =
+        fd.get(
+          'newSurface'
+        );
+
+      log.newUpdatedResult =
+        fd.get(
+          'newUpdatedResult'
+        );
+    }
+
+
+    /*
+      Un solo evento per ogni task tennis.
+    */
+    state.tennisLogs =
+      state.tennisLogs.filter(
+        item =>
+          (
+            item.scheduledDate ||
+            item.date
+          ) !==
+          scheduledDate
+      );
+
+
+    state.tennisLogs.push(
+      log
+    );
+
+
+    state.records[
+      recordKey(
+        scheduledDate,
+        task
+      )
+    ] = {
+      done: true,
+
+      details:
+        tennisActionLabel(
+          action
+        )
+    };
+
+
+    saveState();
+
+    closeModal();
+
+    render();
+
+    notify(
+      'Allenamento tennis registrato.'
+    );
+  };
+}
+
+function renderTennisStats() {
+  const stats =
+    getTennisStats();
+
+
+  return `
+    <div class="card">
+
+      <div class="card-header">
+
+        <div>
+          <h2>
+            Statistiche partite
+          </h2>
+
+          <p>
+            Solo partite concluse
+          </p>
+        </div>
+
+      </div>
+
+
+      <div class="metric-grid">
+
+        <div class="metric tennis-win-metric">
+
+          <span>
+            Vittorie
+          </span>
+
+          <strong>
+            ${stats.wins}
+          </strong>
+
+        </div>
+
+
+        <div class="metric tennis-loss-metric">
+
+          <span>
+            Sconfitte
+          </span>
+
+          <strong>
+            ${stats.losses}
+          </strong>
+
+        </div>
+
+
+        <div class="metric">
+
+          <span>
+            Win rate
+          </span>
+
+          <strong>
+            ${stats.winRate}%
+          </strong>
+
+        </div>
+
+
+        <div class="metric">
+
+          <span>
+            Superficie preferita
+          </span>
+
+          <strong>
+            ${stats.preferred}
+          </strong>
+
+        </div>
+
+      </div>
+
+
+      <div class="tennis-surface-stats">
+
+        ${Object.entries(
+          stats.surfaces
+        )
+          .map(
+            ([surface, values]) => `
+              <div class="tennis-surface-row">
+
+                <span>
+                  ${surface}
+                </span>
+
+                <strong>
+                  <span class="tennis-win-text">
+                    ${values.wins} V
+                  </span>
+
+                  ·
+
+                  <span class="tennis-loss-text">
+                    ${values.losses} S
+                  </span>
+                </strong>
+
+              </div>
+            `
+          )
+          .join('')}
+
+      </div>
+
+    </div>
+  `;
+}
+
+function renderTennisHistory() {
+  const matches =
+    buildTennisMatches()
+      .slice()
+      .reverse();
+
+
+  return `
+    <div class="card">
+
+      <h2>
+        Storico partite
+      </h2>
+
+      ${
+        matches.length
+          ? matches
+              .map(match => {
+
+                let cssClass =
+                  'open';
+
+                let label =
+                  'IN CORSO';
+
+
+                if (
+                  match.status ===
+                  'completed'
+                ) {
+                  cssClass =
+                    match.outcome ===
+                    'win'
+                      ? 'win'
+                      : 'loss';
+
+                  label =
+                    match.outcome ===
+                    'win'
+                      ? 'VITTORIA'
+                      : 'SCONFITTA';
+                }
+
+
+                if (
+                  match.status ===
+                  'legacy'
+                ) {
+                  cssClass =
+                    'legacy';
+
+                  label =
+                    'STORICO';
+                }
+
+
+                return `
+                  <div
+                    class="tennis-match-row ${cssClass}"
+                  >
+
+                    <div class="tennis-match-status">
+                      ${label}
+                    </div>
+
+
+                    <div class="tennis-match-copy">
+
+                      <strong>
+                        ${
+                          esc(
+                            match.finalResult ||
+                            match.currentResult
+                          ) ||
+                          'Risultato non disponibile'
+                        }
+                      </strong>
+
+                      <span>
+                        ${esc(
+                          match.surface
+                        )}
+                        ·
+                        ${formatDate(
+                          match.lastDate
+                        )}
+                      </span>
+
+                    </div>
+
+                  </div>
+                `;
+              })
+              .join('')
+          : `
+              <div class="empty">
+                Nessuna partita registrata.
+              </div>
+            `
+      }
+
+    </div>
+  `;
 }
 
 function openGymEditor(key) {
@@ -2077,7 +3756,7 @@ function drawBpmChart(dates, byDate) {
     ctx.lineTo(w - pad.r, y);
     ctx.stroke();
   }
-  const values = dates.map(d => ({ label: d.slice(5), value: byDate[d]?.bpm ?? null, zone: byDate[d]?.zone || 3 }));
+  const values = dates.map(d => ({ label: d.slice(5), value: byDate[d]?.bpm ?? null, zone: byDate[d]?.bpm ? heartRateZoneFromBpm(byDate[d].bpm) : null }));
   const xAt = i => pad.l + (w - pad.l - pad.r) * (values.length === 1 ? .5 : i / (values.length - 1));
   const yAt = v => pad.t + (h - pad.t - pad.b) * (1 - (v - min) / (max - min));
   let begun = false;

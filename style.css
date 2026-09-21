@@ -1927,6 +1927,417 @@ p {
   font-size: 11px;
 }
 
+/* =========================================================
+   TENNIS
+   ========================================================= */
+
+.tennis-active-match {
+  padding: 14px;
+
+  margin:
+    14px
+    0;
+
+  border-radius: 17px;
+
+  border:
+    1px solid
+    rgba(84, 205, 255, 0.22);
+
+  background:
+    rgba(84, 205, 255, 0.06);
+}
+
+.tennis-active-match span {
+  display: block;
+
+  margin-bottom: 5px;
+
+  color: var(--blue);
+
+  font-size: 9px;
+
+  font-weight: 700;
+
+  letter-spacing: 0.15em;
+}
+
+.tennis-active-match strong {
+  display: block;
+
+  font-size: 17px;
+}
+
+.tennis-active-match small {
+  display: block;
+
+  margin-top: 4px;
+
+  color: var(--muted);
+}
+
+
+/* Scelta del tipo di allenamento */
+
+.tennis-action-list {
+  display: flex;
+  flex-direction: column;
+
+  gap: 8px;
+
+  margin:
+    15px
+    0;
+}
+
+.tennis-action-option {
+  width: 100%;
+
+  padding:
+    13px
+    14px;
+
+  text-align: left;
+
+  border-radius: 16px;
+
+  border:
+    1px solid
+    var(--line);
+
+  background:
+    rgba(
+      255,
+      255,
+      255,
+      0.025
+    );
+
+  color: var(--text);
+}
+
+.tennis-action-option strong {
+  display: block;
+
+  font-size: 13px;
+}
+
+.tennis-action-option span {
+  display: block;
+
+  margin-top: 4px;
+
+  color: var(--muted);
+
+  font-size: 10px;
+
+  line-height: 1.4;
+}
+
+.tennis-action-option.active {
+  border-color:
+    rgba(
+      53,
+      240,
+      255,
+      0.38
+    );
+
+  background:
+    rgba(
+      53,
+      240,
+      255,
+      0.08
+    );
+}
+
+
+/* Campi che compaiono dopo la scelta */
+
+.tennis-action-fields {
+  margin-top: 14px;
+}
+
+.tennis-form-section {
+  padding:
+    14px
+    0;
+
+  border-top:
+    1px solid
+    var(--line);
+}
+
+.tennis-form-section-title {
+  display: block;
+
+  margin-bottom: 12px;
+
+  color: var(--blue);
+
+  font-size: 9px;
+
+  font-weight: 700;
+
+  letter-spacing: 0.15em;
+}
+
+
+/* Vittoria / sconfitta */
+
+.tennis-outcome-choice {
+  display: grid;
+
+  grid-template-columns:
+    1fr
+    1fr;
+
+  gap: 8px;
+}
+
+.tennis-outcome-choice input {
+  display: none;
+}
+
+.tennis-outcome-choice span {
+  display: block;
+
+  padding: 11px;
+
+  text-align: center;
+
+  border-radius: 13px;
+
+  border:
+    1px solid
+    var(--line);
+
+  background:
+    rgba(
+      255,
+      255,
+      255,
+      0.025
+    );
+
+  color: var(--muted);
+
+  font-size: 12px;
+}
+
+.tennis-outcome-choice
+input:checked + span {
+  color: var(--text);
+
+  border-color:
+    rgba(
+      53,
+      240,
+      255,
+      0.38
+    );
+
+  background:
+    rgba(
+      53,
+      240,
+      255,
+      0.08
+    );
+}
+
+
+/* Statistiche superficie */
+
+.tennis-surface-stats {
+  margin-top: 15px;
+
+  border-top:
+    1px solid
+    var(--line);
+}
+
+.tennis-surface-row {
+  display: flex;
+
+  align-items: center;
+
+  justify-content:
+    space-between;
+
+  padding:
+    11px
+    2px;
+
+  border-bottom:
+    1px solid
+    var(--line);
+}
+
+.tennis-surface-row:last-child {
+  border-bottom: 0;
+}
+
+.tennis-surface-row span {
+  font-size: 12px;
+}
+
+.tennis-win-text {
+  color:
+    var(--success);
+}
+
+.tennis-loss-text {
+  color:
+    var(--danger);
+}
+
+.tennis-win-metric strong {
+  color:
+    var(--success);
+}
+
+.tennis-loss-metric strong {
+  color:
+    var(--danger);
+}
+
+
+/* Storico partite */
+
+.tennis-match-row {
+  display: flex;
+
+  align-items: center;
+
+  gap: 12px;
+
+  padding: 13px;
+
+  margin-top: 9px;
+
+  border-radius: 16px;
+
+  border:
+    1px solid
+    var(--line);
+
+  background:
+    rgba(
+      255,
+      255,
+      255,
+      0.02
+    );
+}
+
+.tennis-match-row.win {
+  border-color:
+    rgba(
+      60,
+      229,
+      162,
+      0.24
+    );
+
+  background:
+    rgba(
+      60,
+      229,
+      162,
+      0.045
+    );
+}
+
+.tennis-match-row.loss {
+  border-color:
+    rgba(
+      255,
+      104,
+      132,
+      0.24
+    );
+
+  background:
+    rgba(
+      255,
+      104,
+      132,
+      0.045
+    );
+}
+
+.tennis-match-row.open {
+  border-color:
+    rgba(
+      84,
+      205,
+      255,
+      0.22
+    );
+
+  background:
+    rgba(
+      84,
+      205,
+      255,
+      0.045
+    );
+}
+
+.tennis-match-status {
+  min-width: 64px;
+
+  color: var(--muted);
+
+  font-size: 8px;
+
+  font-weight: 800;
+
+  letter-spacing: 0.09em;
+}
+
+.tennis-match-row.win
+.tennis-match-status {
+  color:
+    var(--success);
+}
+
+.tennis-match-row.loss
+.tennis-match-status {
+  color:
+    var(--danger);
+}
+
+.tennis-match-row.open
+.tennis-match-status {
+  color:
+    var(--blue);
+}
+
+.tennis-match-copy {
+  flex: 1;
+
+  min-width: 0;
+}
+
+.tennis-match-copy strong {
+  display: block;
+
+  font-size: 14px;
+}
+
+.tennis-match-copy span {
+  display: block;
+
+  margin-top: 4px;
+
+  color: var(--muted);
+
+  font-size: 10px;
+}
+
 @media (min-width: 700px) {
   .app-shell, .setup-shell {
     padding-top: 28px;
