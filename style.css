@@ -2860,60 +2860,7 @@ body.workout-mode {
    TIMER
    ========================================================= */
 
-.workout-timer {
-  margin:
-    25px
-    0
-    14px;
 
-  font-variant-numeric:
-    tabular-nums;
-
-  font-size:
-    clamp(
-      56px,
-      15vw,
-      88px
-    );
-
-  font-weight: 250;
-
-  line-height: 1;
-
-  letter-spacing: -0.06em;
-
-  color: var(--text);
-
-  text-shadow:
-    0 0 42px
-    rgba(53, 240, 255, 0.12);
-}
-
-
-.workout-timer.recovery {
-  color: var(--cyan);
-}
-
-
-/* =========================================================
-   SKIP
-   ========================================================= */
-
-.workout-text-button {
-  margin-top: 12px;
-
-  padding:
-    10px
-    16px;
-
-  border: 0;
-
-  background: transparent;
-
-  color: var(--blue);
-
-  font-size: 12px;
-}
 
 
 /* =========================================================

@@ -71,7 +71,6 @@ let ui = {
   calendarMonth: monthISO(todayISO()),
   chartPeriod: 'month'
 };
-let workoutAnimationFrame = null;
 let toastTimer = null;
 
 // ============================================================
@@ -89,7 +88,7 @@ function defaultState() {
     currentHeight: null,
     runLogs: [],
     tennisLogs: [],
-    gymTemplates: { gym1: [], gym2: [], gym3: [] }, activeWorkout: null
+    gymTemplates: { gym1: [], gym2: [], gym3: [] }, scheduleHistory: {}, activeWorkout: null
   };
 }
 
@@ -195,17 +194,156 @@ function bodyShapeScore(weight, heightCm) { return round1(clamp(BODY_MAX * (1 - 
 
 function weekFrequency(schedule) { return schedule.mode === 'days' ? schedule.days.length : Number(schedule.perWeek || 0); }
 
+function cloneSchedule(schedule) {
+  return {
+    ...schedule,
+    days: [
+      ...(schedule.days || [])
+    ]
+  };
+}
+
+
+function getScheduleForDate(task, date) {
+  const history =
+    state.scheduleHistory?.[task] || [];
+
+  const validVersions =
+    history
+      .filter(
+        item =>
+          item.from <= date
+      )
+      .sort(
+        (a, b) =>
+          a.from.localeCompare(
+            b.from
+          )
+      );
+
+  if (validVersions.length) {
+    return validVersions[
+      validVersions.length - 1
+    ].schedule;
+  }
+
+  return (
+    state.settings
+      .schedules[task]
+  );
+}
+
+
+function saveScheduleVersion(
+  task,
+  newSchedule
+) {
+  if (!state.scheduleHistory) {
+    state.scheduleHistory = {};
+  }
+
+  const today =
+    todayISO();
+
+  const oldSchedule =
+    cloneSchedule(
+      state.settings
+        .schedules[task]
+    );
+
+  let history =
+    state.scheduleHistory[task] || [];
+
+
+  /*
+    La prima volta che modifichiamo
+    una programmazione salviamo anche
+    quella originale, così il passato
+    rimane corretto.
+  */
+  if (
+    !history.length &&
+    state.startDate &&
+    state.startDate < today
+  ) {
+    history.push({
+      from: state.startDate,
+      schedule: oldSchedule
+    });
+  }
+
+
+  const newVersion = {
+    from: today,
+    schedule:
+      cloneSchedule(
+        newSchedule
+      )
+  };
+
+
+  /*
+    Se oggi l'hai già modificata una volta,
+    aggiorniamo la modifica di oggi
+    invece di crearne un'altra.
+  */
+  const todayIndex =
+    history.findIndex(
+      item =>
+        item.from === today
+    );
+
+
+  if (todayIndex >= 0) {
+    history[todayIndex] =
+      newVersion;
+  } else {
+    history.push(
+      newVersion
+    );
+  }
+
+
+  history.sort(
+    (a, b) =>
+      a.from.localeCompare(
+        b.from
+      )
+  );
+
+
+  state.scheduleHistory[task] =
+    history;
+
+  state.settings.schedules[task] =
+    cloneSchedule(
+      newSchedule
+    );
+}
+
 function autoDays(perWeek) { return AUTO_DAYS.slice(0, clamp(perWeek, 0, 7)); }
 
 function taskDays(schedule) { return schedule.mode === 'days' ? schedule.days.map(Number) : autoDays(Number(schedule.perWeek)); }
 
 function isScheduled(task, iso) {
-  if (!state.settings)
+  if (!state.settings) {
     return false;
-  const schedule = state.settings.schedules[task];
-  if (!schedule)
+  }
+
+  const schedule =
+    getScheduleForDate(
+      task,
+      iso
+    );
+
+  if (!schedule) {
     return false;
-  return taskDays(schedule).includes(dateObj(iso).getDay());
+  }
+
+  return taskDays(schedule)
+    .includes(
+      dateObj(iso).getDay()
+    );
 }
 
 function scheduledTasks(iso, group = null) {
@@ -3459,8 +3597,8 @@ function startWorkout(key) {
 
 
   /*
-    Se invece esiste una sessione
-    di un'altra scheda, non la sovrascriviamo.
+    Se esiste un allenamento sospeso
+    appartenente a un'altra scheda.
   */
   if (
     state.activeWorkout &&
@@ -3482,12 +3620,8 @@ function startWorkout(key) {
     phase: 'ready',
 
     exerciseIndex: 0,
-    setIndex: 0,
 
     paused: false,
-
-    timerEndAt: null,
-    timerRemainingMs: null,
 
     startedAt:
       Date.now()
@@ -3586,16 +3720,6 @@ function renderWorkoutScreen() {
     !workout
   ) {
     return;
-  }
-
-
-  if (workoutAnimationFrame) {
-    cancelAnimationFrame(
-      workoutAnimationFrame
-    );
-
-    workoutAnimationFrame =
-      null;
   }
 
 
@@ -3707,18 +3831,6 @@ function renderWorkoutScreen() {
 
 
   bindWorkoutScreen();
-
-
-  /*
-    Se siamo dentro un timer,
-    facciamo partire l'animazione.
-  */
-  if (
-    !workout.paused &&
-    workout.timerEndAt
-  ) {
-    animateWorkoutTimer();
-  }
 }
 
 function renderWorkoutPhase(
@@ -3744,7 +3856,7 @@ function renderWorkoutPhase(
 
         <p>
           Riprenderai esattamente
-          dal punto in cui avevi lasciato.
+          dall'esercizio in cui avevi lasciato.
         </p>
 
         <button
@@ -3760,7 +3872,7 @@ function renderWorkoutPhase(
 
 
   /*
-    PRIMA SCHERMATA
+    SCHERMATA INIZIALE
   */
   if (
     workout.phase ===
@@ -3778,12 +3890,14 @@ function renderWorkoutPhase(
         </h1>
 
         <p>
+          ${exercises.length}
           ${
-            exercises.length
+            exercises.length === 1
+              ? 'esercizio'
+              : 'esercizi'
           }
-          esercizi configurati
+          nella scheda
         </p>
-
 
         <button
           class="workout-primary-button"
@@ -3846,8 +3960,8 @@ function renderWorkoutPhase(
                 exercise.value
               }${
                 exercise.mode ===
-                'duration'
-                  ? 's'
+                  'duration'
+                  ? ' s'
                   : ''
               }
             </strong>
@@ -3885,261 +3999,83 @@ function renderWorkoutPhase(
 
   /*
     ESERCIZIO IN CORSO
+
+    Nessuna differenza tra:
+    - ripetizioni
+    - durata
+
+    Il timing viene gestito
+    esternamente con Apple Watch.
   */
   if (
     workout.phase ===
     'exercise'
   ) {
-
-    /*
-      ESERCIZIO A DURATA
-    */
-    if (
-      exercise.mode ===
-      'duration'
-    ) {
-      return `
-        <div class="workout-center-screen">
-
-          <div class="workout-pretitle">
-            ${esc(
-              exercise.name
-            )}
-          </div>
-
-
-          <div class="workout-set-label">
-            Ripetizione
-            ${
-              workout.setIndex + 1
-            }
-            /
-            ${exercise.sets}
-          </div>
-
-
-          <div
-            class="workout-timer"
-            id="workoutTimer"
-          >
-            ${formatWorkoutTime(
-              workoutTimerRemaining()
-            )}
-          </div>
-
-
-          <p>
-            ${
-              exercise.weight
-                ? `${exercise.weight} kg`
-                : ''
-            }
-          </p>
-
-        </div>
-      `;
-    }
-
-
-    /*
-      ESERCIZIO A RIPETIZIONI
-    */
     return `
       <div class="workout-center-screen">
 
         <div class="workout-pretitle">
-          ${esc(
-            exercise.name
-          )}
+          ESERCIZIO IN CORSO
         </div>
 
-
-        <div class="workout-set-label">
-          Ripetizione
-          ${
-            workout.setIndex + 1
-          }
-          /
-          ${exercise.sets}
-        </div>
-
-
-        <div class="workout-reps-number">
-          ${exercise.value}
-        </div>
-
-        <div class="workout-reps-label">
-          RIPETIZIONI
-        </div>
-
-
-        ${
-          exercise.weight
-            ? `
-                <div class="workout-weight-pill">
-                  ${exercise.weight} kg
-                </div>
-              `
-            : ''
-        }
-
-
-        <button
-          class="workout-primary-button"
-          data-workout-finish-set
-        >
-          Fine ripetizione
-        </button>
-
-      </div>
-    `;
-  }
-
-
-  /*
-    TIMER FINITO PER ESERCIZIO A DURATA
-  */
-  if (
-    workout.phase ===
-    'setComplete'
-  ) {
-    return `
-      <div class="workout-center-screen">
-
-        <div class="workout-check">
-          ✓
-        </div>
-
-        <div class="workout-pretitle">
-          TEMPO COMPLETATO
-        </div>
-
-        <h1>
+        <h1 class="workout-big-exercise">
           ${esc(
             exercise.name
           )}
         </h1>
 
 
-        <button
-          class="workout-primary-button"
-          data-workout-finish-set
-        >
-          Fine ripetizione
-        </button>
+        <div class="workout-info-grid">
 
-      </div>
-    `;
-  }
+          <div>
+            <span>
+              Serie
+            </span>
+
+            <strong>
+              ${exercise.sets}
+            </strong>
+          </div>
 
 
-  /*
-    RECUPERO
-  */
-  if (
-    workout.phase ===
-    'rest'
-  ) {
-    return `
-      <div class="workout-center-screen">
+          <div>
+            <span>
+              ${
+                exercise.mode ===
+                'duration'
+                  ? 'Durata'
+                  : 'Ripetizioni'
+              }
+            </span>
 
-        <div class="workout-pretitle">
-          RECUPERO
+            <strong>
+              ${
+                exercise.value
+              }${
+                exercise.mode ===
+                  'duration'
+                  ? ' s'
+                  : ''
+              }
+            </strong>
+          </div>
+
+
+          <div>
+            <span>
+              Peso
+            </span>
+
+            <strong>
+              ${
+                exercise.weight
+                  ? `${exercise.weight} kg`
+                  : '—'
+              }
+            </strong>
+          </div>
+
         </div>
-
-
-        <div
-          class="workout-timer recovery"
-          id="workoutTimer"
-        >
-          ${formatWorkoutTime(
-            workoutTimerRemaining()
-          )}
-        </div>
-
-
-        <p>
-          Respira. Preparati alla prossima.
-        </p>
-
-
-        <button
-          class="workout-text-button"
-          data-workout-skip-rest
-        >
-          Salta recupero
-        </button>
-
-      </div>
-    `;
-  }
-
-
-  /*
-    TRA UNA SERIE E L'ALTRA
-  */
-  if (
-    workout.phase ===
-    'betweenSets'
-  ) {
-    return `
-      <div class="workout-center-screen">
-
-        <div class="workout-pretitle">
-          PROSSIMA RIPETIZIONE
-        </div>
-
-        <h1>
-          ${esc(
-            exercise.name
-          )}
-        </h1>
-
-
-        <div class="workout-set-label large">
-          ${
-            workout.setIndex + 1
-          }
-          /
-          ${exercise.sets}
-        </div>
-
-
-        <button
-          class="workout-primary-button"
-          data-workout-next-set
-        >
-          Inizia ripetizione
-        </button>
-
-      </div>
-    `;
-  }
-
-
-  /*
-    ESERCIZIO TERMINATO
-  */
-  if (
-    workout.phase ===
-    'exerciseComplete'
-  ) {
-    return `
-      <div class="workout-center-screen">
-
-        <div class="workout-check">
-          ✓
-        </div>
-
-        <div class="workout-pretitle">
-          ESERCIZIO COMPLETATO
-        </div>
-
-        <h1>
-          ${esc(
-            exercise.name
-          )}
-        </h1>
 
 
         <button
@@ -4155,7 +4091,7 @@ function renderWorkoutPhase(
 
 
   /*
-    TUTTO COMPLETATO
+    ALLENAMENTO COMPLETATO
   */
   if (
     workout.phase ===
@@ -4177,10 +4113,9 @@ function renderWorkoutPhase(
         </h1>
 
         <p>
-          Tutti gli esercizi
-          della scheda sono stati completati.
+          Hai completato tutti gli esercizi
+          della scheda.
         </p>
-
 
         <button
           class="workout-primary-button"
@@ -4198,6 +4133,10 @@ function renderWorkoutPhase(
 }
 
 function bindWorkoutScreen() {
+
+  /*
+    INIZIA ALLENAMENTO
+  */
   const start =
     document.querySelector(
       '[data-workout-start]'
@@ -4209,6 +4148,9 @@ function bindWorkoutScreen() {
   }
 
 
+  /*
+    INIZIA ESERCIZIO
+  */
   const beginExercise =
     document.querySelector(
       '[data-workout-begin-exercise]'
@@ -4216,32 +4158,13 @@ function bindWorkoutScreen() {
 
   if (beginExercise) {
     beginExercise.onclick =
-      beginCurrentWorkoutSet;
+      beginCurrentWorkoutExercise;
   }
 
 
-  const finishSet =
-    document.querySelector(
-      '[data-workout-finish-set]'
-    );
-
-  if (finishSet) {
-    finishSet.onclick =
-      finishWorkoutSet;
-  }
-
-
-  const nextSet =
-    document.querySelector(
-      '[data-workout-next-set]'
-    );
-
-  if (nextSet) {
-    nextSet.onclick =
-      beginCurrentWorkoutSet;
-  }
-
-
+  /*
+    FINE ESERCIZIO
+  */
   const finishExercise =
     document.querySelector(
       '[data-workout-finish-exercise]'
@@ -4253,17 +4176,9 @@ function bindWorkoutScreen() {
   }
 
 
-  const skipRest =
-    document.querySelector(
-      '[data-workout-skip-rest]'
-    );
-
-  if (skipRest) {
-    skipRest.onclick =
-      finishWorkoutRecovery;
-  }
-
-
+  /*
+    SOSPENDI
+  */
   const suspend =
     document.querySelector(
       '[data-workout-suspend]'
@@ -4275,6 +4190,9 @@ function bindWorkoutScreen() {
   }
 
 
+  /*
+    RIPRENDI
+  */
   const resume =
     document.querySelector(
       '[data-workout-resume]'
@@ -4286,6 +4204,9 @@ function bindWorkoutScreen() {
   }
 
 
+  /*
+    FINE ALLENAMENTO MANUALE
+  */
   document
     .querySelectorAll(
       '[data-workout-finish]'
@@ -4299,6 +4220,9 @@ function bindWorkoutScreen() {
     });
 
 
+  /*
+    FINE ALLENAMENTO NATURALE
+  */
   const complete =
     document.querySelector(
       '[data-workout-complete]'
@@ -4329,7 +4253,7 @@ function beginWorkout() {
   renderWorkoutScreen();
 }
 
-function beginCurrentWorkoutSet() {
+function beginCurrentWorkoutExercise() {
   const workout =
     state.activeWorkout;
 
@@ -4346,120 +4270,6 @@ function beginCurrentWorkoutSet() {
 
   workout.phase =
     'exercise';
-
-  workout.timerEndAt =
-    null;
-
-  workout.timerRemainingMs =
-    null;
-
-
-  /*
-    Se è un esercizio a durata,
-    parte immediatamente il timer.
-  */
-  if (
-    exercise.mode ===
-    'duration'
-  ) {
-    workout.timerEndAt =
-      Date.now() +
-      exercise.value * 1000;
-  }
-
-
-  saveState();
-
-  renderWorkoutScreen();
-}
-
-function finishWorkoutSet() {
-  const workout =
-    state.activeWorkout;
-
-  const exercise =
-    getCurrentWorkoutExercise();
-
-  if (
-    !workout ||
-    !exercise
-  ) {
-    return;
-  }
-
-
-  workout.phase =
-    'rest';
-
-  workout.timerRemainingMs =
-    null;
-
-
-  const recoveryMs =
-    Math.max(
-      0,
-      Number(
-        exercise.rest
-      ) * 1000
-    );
-
-
-  if (
-    recoveryMs === 0
-  ) {
-    finishWorkoutRecovery();
-
-    return;
-  }
-
-
-  workout.timerEndAt =
-    Date.now() +
-    recoveryMs;
-
-
-  saveState();
-
-  renderWorkoutScreen();
-}
-
-function finishWorkoutRecovery() {
-  const workout =
-    state.activeWorkout;
-
-  const exercise =
-    getCurrentWorkoutExercise();
-
-  if (
-    !workout ||
-    !exercise
-  ) {
-    return;
-  }
-
-
-  workout.timerEndAt =
-    null;
-
-  workout.timerRemainingMs =
-    null;
-
-
-  const isLastSet =
-    workout.setIndex >=
-    exercise.sets - 1;
-
-
-  if (isLastSet) {
-    workout.phase =
-      'exerciseComplete';
-
-  } else {
-    workout.setIndex++;
-
-    workout.phase =
-      'betweenSets';
-  }
 
 
   saveState();
@@ -4487,25 +4297,25 @@ function finishWorkoutExercise() {
     exercises.length - 1;
 
 
+  /*
+    Se era l'ultimo esercizio:
+    workout completato.
+  */
   if (isLastExercise) {
     workout.phase =
       'complete';
+  }
 
-  } else {
+  /*
+    Altrimenti passiamo
+    all'esercizio successivo.
+  */
+  else {
     workout.exerciseIndex++;
-
-    workout.setIndex = 0;
 
     workout.phase =
       'next';
   }
-
-
-  workout.timerEndAt =
-    null;
-
-  workout.timerRemainingMs =
-    null;
 
 
   saveState();
@@ -4519,26 +4329,6 @@ function suspendWorkout() {
 
   if (!workout) {
     return;
-  }
-
-
-  /*
-    Se c'è un timer attivo,
-    salviamo esattamente
-    quanto tempo mancava.
-  */
-  if (
-    workout.timerEndAt
-  ) {
-    workout.timerRemainingMs =
-      Math.max(
-        0,
-        workout.timerEndAt -
-        Date.now()
-      );
-
-    workout.timerEndAt =
-      null;
   }
 
 
@@ -4566,19 +4356,6 @@ function resumeWorkout() {
 
   workout.paused =
     false;
-
-
-  if (
-    workout.timerRemainingMs != null &&
-    workout.timerRemainingMs > 0
-  ) {
-    workout.timerEndAt =
-      Date.now() +
-      workout.timerRemainingMs;
-
-    workout.timerRemainingMs =
-      null;
-  }
 
 
   saveState();
@@ -4649,160 +4426,6 @@ function finishWorkoutSession(
   );
 }
 
-function workoutTimerRemaining() {
-  const workout =
-    state.activeWorkout;
-
-  if (!workout) {
-    return 0;
-  }
-
-
-  if (
-    workout.timerEndAt
-  ) {
-    return Math.max(
-      0,
-      workout.timerEndAt -
-      Date.now()
-    );
-  }
-
-
-  return Math.max(
-    0,
-    workout.timerRemainingMs ||
-    0
-  );
-}
-
-function formatWorkoutTime(ms) {
-  const safe =
-    Math.max(
-      0,
-      Math.floor(ms)
-    );
-
-  const minutes =
-    Math.floor(
-      safe / 60000
-    );
-
-  const seconds =
-    Math.floor(
-      (
-        safe % 60000
-      ) / 1000
-    );
-
-  const milliseconds =
-    safe % 1000;
-
-
-  return (
-    String(minutes)
-      .padStart(2, '0') +
-    ':' +
-    String(seconds)
-      .padStart(2, '0') +
-    '.' +
-    String(milliseconds)
-      .padStart(3, '0')
-  );
-}
-
-function animateWorkoutTimer() {
-  if (
-    workoutAnimationFrame
-  ) {
-    cancelAnimationFrame(
-      workoutAnimationFrame
-    );
-  }
-
-
-  const tick = () => {
-    const workout =
-      state.activeWorkout;
-
-    if (
-      !workout ||
-      workout.paused
-    ) {
-      return;
-    }
-
-
-    const remaining =
-      workoutTimerRemaining();
-
-
-    const element =
-      document.getElementById(
-        'workoutTimer'
-      );
-
-
-    if (element) {
-      element.textContent =
-        formatWorkoutTime(
-          remaining
-        );
-    }
-
-
-    if (
-      remaining <= 0
-    ) {
-      workout.timerEndAt =
-        null;
-
-      workout.timerRemainingMs =
-        0;
-
-
-      /*
-        Fine esercizio a durata.
-      */
-      if (
-        workout.phase ===
-        'exercise'
-      ) {
-        workout.phase =
-          'setComplete';
-
-        saveState();
-
-        renderWorkoutScreen();
-
-        return;
-      }
-
-
-      /*
-        Fine recupero.
-      */
-      if (
-        workout.phase ===
-        'rest'
-      ) {
-        finishWorkoutRecovery();
-
-        return;
-      }
-    }
-
-
-    workoutAnimationFrame =
-      requestAnimationFrame(
-        tick
-      );
-  };
-
-
-  tick();
-}
-
 function openModal(html) { document.getElementById('modal-root').innerHTML = `<div class="modal-backdrop"><div class="modal"><button class="modal-close" onclick="closeModal()">✕</button>${html}</div></div>`; }
 
 function closeModal() { document.getElementById('modal-root').innerHTML = ''; }
@@ -4830,20 +4453,212 @@ function bindStats() { document.querySelectorAll('[data-stat-period]').forEach(b
 // IMPOSTAZIONI E RESET
 // ============================================================
 
-function renderSettings() {
-  const s = state.settings;
+function settingsScheduleEditor(key) {
+  const schedule =
+    state.settings
+      .schedules[key];
 
-  const initialBodyShape = clamp(
-    bodyShapeScore(
-      s.initial.weight,
-      s.initial.height
-    ) +
-    Math.floor(
-      s.initial.strength / 10
-    ),
-    0,
-    99
-  );
+  /*
+    Questa è la frequenza BLOCCATA.
+    L'utente non potrà cambiarla.
+  */
+  const frequency =
+    weekFrequency(
+      schedule
+    );
+
+
+  let selectedDays =
+    Array.isArray(
+      schedule.days
+    )
+      ? schedule.days.map(Number)
+      : [];
+
+
+  /*
+    Se arriviamo dalla modalità
+    "volte/settimana" e non abbiamo
+    abbastanza giorni salvati,
+    proponiamo automaticamente
+    dei giorni.
+  */
+  if (
+    selectedDays.length !==
+    frequency
+  ) {
+    selectedDays =
+      autoDays(
+        frequency
+      );
+  }
+
+
+  return `
+    <div
+      class="settings-schedule-editor"
+      data-settings-schedule="${key}"
+      data-frequency="${frequency}"
+    >
+
+      <div class="schedule-head">
+
+        <strong>
+          ${TASKS[key].icon}
+          ${TASKS[key].title}
+        </strong>
+
+        <span class="badge">
+          ${frequency} / settimana
+        </span>
+
+      </div>
+
+
+      <div class="field">
+
+        <label>
+          Modalità di programmazione
+        </label>
+
+        <select
+          class="select settings-schedule-mode"
+        >
+
+          <option
+            value="days"
+            ${
+              schedule.mode === 'days'
+                ? 'selected'
+                : ''
+            }
+          >
+            Giorni della settimana
+          </option>
+
+          <option
+            value="count"
+            ${
+              schedule.mode === 'count'
+                ? 'selected'
+                : ''
+            }
+          >
+            Volte a settimana
+          </option>
+
+        </select>
+
+      </div>
+
+
+      <div
+        class="settings-schedule-days ${
+          schedule.mode === 'days'
+            ? ''
+            : 'hidden'
+        }"
+      >
+
+        <div class="day-checks">
+
+          ${DAYS.map(
+            (day, index) => `
+              <span class="day-chip">
+
+                <input
+                  id="settings_${key}_${index}"
+                  class="settings-day-check"
+                  type="checkbox"
+                  value="${index}"
+                  ${
+                    selectedDays.includes(index)
+                      ? 'checked'
+                      : ''
+                  }
+                >
+
+                <label
+                  for="settings_${key}_${index}"
+                >
+                  ${day}
+                </label>
+
+              </span>
+            `
+          ).join('')}
+
+        </div>
+
+        <p class="helper">
+          Devi selezionare esattamente
+          ${frequency}
+          ${
+            frequency === 1
+              ? 'giorno'
+              : 'giorni'
+          }.
+          Il numero di sessioni settimanali
+          non può essere modificato.
+        </p>
+
+      </div>
+
+
+      <div
+        class="settings-schedule-count ${
+          schedule.mode === 'count'
+            ? ''
+            : 'hidden'
+        }"
+      >
+
+        <div class="locked-frequency">
+
+          <strong>
+            ${frequency}
+          </strong>
+
+          <span>
+            ${
+              frequency === 1
+                ? 'volta'
+                : 'volte'
+            }
+            a settimana
+          </span>
+
+        </div>
+
+        <p class="helper">
+          La frequenza è bloccata.
+          Le sessioni verranno distribuite
+          automaticamente nella settimana.
+        </p>
+
+      </div>
+
+    </div>
+  `;
+}
+
+function renderSettings() {
+  const s =
+    state.settings;
+
+  const initialBodyShape =
+    clamp(
+      bodyShapeScore(
+        s.initial.weight,
+        s.initial.height
+      ) +
+      Math.floor(
+        s.initial.strength / 10
+      ),
+      0,
+      99
+    );
+
 
   return `
     ${appHeader(
@@ -4851,9 +4666,12 @@ function renderSettings() {
       'Configuration'
     )}
 
+
     <div class="notice">
-      I valori iniziali e la pianificazione sono bloccati dopo lo Start.
-      Il Restart cancella progressi, task, grafici e schede.
+      I valori iniziali e il numero di sessioni settimanali
+      sono bloccati dopo lo Start.
+      Puoi però modificare i giorni oppure passare
+      da giorni fissi a volte/settimana e viceversa.
     </div>
 
 
@@ -4863,7 +4681,9 @@ function renderSettings() {
         Profilo iniziale
       </h2>
 
+
       <div class="kpi-split">
+
         <span>
           Endurance iniziale
         </span>
@@ -4871,9 +4691,12 @@ function renderSettings() {
         <strong>
           ${s.initial.endurance}
         </strong>
+
       </div>
 
+
       <div class="kpi-split">
+
         <span>
           Strength iniziale
         </span>
@@ -4881,19 +4704,27 @@ function renderSettings() {
         <strong>
           ${s.initial.strength}
         </strong>
+
       </div>
 
+
       <div class="kpi-split">
+
         <span>
           Body Shape iniziale
         </span>
 
         <strong>
-          ${round1(initialBodyShape)}
+          ${round1(
+            initialBodyShape
+          )}
         </strong>
+
       </div>
 
+
       <div class="kpi-split">
+
         <span>
           Peso forma target
         </span>
@@ -4905,9 +4736,12 @@ function renderSettings() {
             )
           )} kg
         </strong>
+
       </div>
 
+
       <div class="kpi-split">
+
         <span>
           Orizzonte level-up
         </span>
@@ -4915,45 +4749,8 @@ function renderSettings() {
         <strong>
           ${s.levelMonths} mesi
         </strong>
+
       </div>
-
-    </div>
-
-
-    <div class="card">
-
-      <h2>
-        Programmazione attiva
-      </h2>
-
-      ${Object.keys(TASKS)
-        .map(key => {
-          const schedule =
-            s.schedules[key];
-
-          const frequency =
-            weekFrequency(schedule);
-
-          return `
-            <div class="kpi-split">
-
-              <span>
-                ${TASKS[key].title}
-              </span>
-
-              <strong>
-                ${frequency} / settimana
-                ${
-                  schedule.duration
-                    ? ` · ${schedule.duration} min`
-                    : ''
-                }
-              </strong>
-
-            </div>
-          `;
-        })
-        .join('')}
 
     </div>
 
@@ -4963,6 +4760,50 @@ function renderSettings() {
       <div class="card-header">
 
         <div>
+
+          <h2>
+            Programmazione
+          </h2>
+
+          <p>
+            Frequenza settimanale bloccata
+          </p>
+
+        </div>
+
+      </div>
+
+
+      ${Object.keys(TASKS)
+        .map(
+          key =>
+            settingsScheduleEditor(
+              key
+            )
+        )
+        .join('')}
+
+
+      <button
+        class="btn"
+        id="saveScheduleChanges"
+        style="
+          width:100%;
+          margin-top:16px;
+        "
+      >
+        Salva programmazione
+      </button>
+
+    </div>
+
+
+    <div class="card">
+
+      <div class="card-header">
+
+        <div>
+
           <h2>
             Restart
           </h2>
@@ -4970,9 +4811,11 @@ function renderSettings() {
           <p>
             Elimina tutti i dati locali dell'app.
           </p>
+
         </div>
 
       </div>
+
 
       <button
         class="btn danger"
@@ -4985,12 +4828,303 @@ function renderSettings() {
   `;
 }
 
-function bindSettings() { document.getElementById('restartBtn').onclick = () => { const pwd = prompt('Inserisci la password di sicurezza per resettare l’app:'); if (pwd !== RESET_PASSWORD) {
-  notify('Password errata. Reset annullato.');
-  return;
-} if (!confirm('Confermi? Tutti i progressi saranno eliminati.'))
-  return; localStorage.removeItem(STORAGE_KEY); state = defaultState(); ui.section = 'settings'; closeModal(); render(); notify('App resettata.'); }; }
+function bindSettings() {
 
+  /*
+    Cambio:
+    giorni fissi ↔ volte/settimana
+  */
+  document
+    .querySelectorAll(
+      '.settings-schedule-mode'
+    )
+    .forEach(select => {
+
+      select.onchange = () => {
+        const block =
+          select.closest(
+            '[data-settings-schedule]'
+          );
+
+        const days =
+          block.querySelector(
+            '.settings-schedule-days'
+          );
+
+        const count =
+          block.querySelector(
+            '.settings-schedule-count'
+          );
+
+
+        days.classList.toggle(
+          'hidden',
+          select.value !== 'days'
+        );
+
+
+        count.classList.toggle(
+          'hidden',
+          select.value !== 'count'
+        );
+      };
+    });
+
+
+  /*
+    Impediamo di selezionare
+    più giorni della frequenza concessa.
+  */
+  document
+    .querySelectorAll(
+      '.settings-day-check'
+    )
+    .forEach(checkbox => {
+
+      checkbox.onchange = () => {
+        const block =
+          checkbox.closest(
+            '[data-settings-schedule]'
+          );
+
+        const frequency =
+          Number(
+            block.dataset.frequency
+          );
+
+        const checked =
+          block.querySelectorAll(
+            '.settings-day-check:checked'
+          );
+
+
+        if (
+          checked.length >
+          frequency
+        ) {
+          checkbox.checked =
+            false;
+
+          notify(
+            `Puoi selezionare massimo ${frequency} ${
+              frequency === 1
+                ? 'giorno'
+                : 'giorni'
+            }.`
+          );
+        }
+      };
+    });
+
+
+  /*
+    SALVATAGGIO PROGRAMMAZIONE
+  */
+  const saveScheduleButton =
+    document.getElementById(
+      'saveScheduleChanges'
+    );
+
+
+  if (saveScheduleButton) {
+
+    saveScheduleButton.onclick =
+      () => {
+
+        const blocks = [
+          ...document.querySelectorAll(
+            '[data-settings-schedule]'
+          )
+        ];
+
+
+        const changes = [];
+
+
+        for (
+          const block of blocks
+        ) {
+          const key =
+            block.dataset
+              .settingsSchedule;
+
+          const frequency =
+            Number(
+              block.dataset.frequency
+            );
+
+          const mode =
+            block.querySelector(
+              '.settings-schedule-mode'
+            ).value;
+
+
+          const days = [
+            ...block.querySelectorAll(
+              '.settings-day-check:checked'
+            )
+          ].map(
+            checkbox =>
+              Number(
+                checkbox.value
+              )
+          );
+
+
+          /*
+            Se scegli giorni fissi,
+            devi mantenere esattamente
+            la frequenza originale.
+          */
+          if (
+            mode === 'days' &&
+            days.length !==
+            frequency
+          ) {
+            notify(
+              `${TASKS[key].short}: devi selezionare esattamente ${frequency} ${
+                frequency === 1
+                  ? 'giorno'
+                  : 'giorni'
+              }.`
+            );
+
+            return;
+          }
+
+
+          const oldSchedule =
+            state.settings
+              .schedules[key];
+
+
+          const newSchedule = {
+            ...oldSchedule,
+
+            mode,
+
+            /*
+              SEMPRE bloccato:
+              non viene mai modificato.
+            */
+            perWeek:
+              frequency,
+
+            /*
+              Manteniamo i giorni scelti
+              anche se passi temporaneamente
+              alla modalità count.
+            */
+            days:
+              days.length ===
+              frequency
+                ? days
+                : (
+                    oldSchedule.days ||
+                    autoDays(
+                      frequency
+                    )
+                  )
+          };
+
+
+          changes.push({
+            key,
+            schedule:
+              newSchedule
+          });
+        }
+
+
+        /*
+          Solo dopo aver validato TUTTO
+          applichiamo le modifiche.
+        */
+        changes.forEach(
+          change => {
+            saveScheduleVersion(
+              change.key,
+              change.schedule
+            );
+          }
+        );
+
+
+        saveState();
+
+        render();
+
+        notify(
+          'Programmazione aggiornata.'
+        );
+      };
+  }
+
+
+  /*
+    RESTART
+  */
+  const restartButton =
+    document.getElementById(
+      'restartBtn'
+    );
+
+
+  if (restartButton) {
+
+    restartButton.onclick =
+      () => {
+
+        const password =
+          prompt(
+            'Inserisci la password di sicurezza per resettare l’app:'
+          );
+
+
+        if (
+          password !==
+          RESET_PASSWORD
+        ) {
+          notify(
+            'Password errata. Reset annullato.'
+          );
+
+          return;
+        }
+
+
+        if (
+          !confirm(
+            'Confermi? Tutti i progressi saranno eliminati.'
+          )
+        ) {
+          return;
+        }
+
+
+        localStorage.removeItem(
+          STORAGE_KEY
+        );
+
+
+        state =
+          defaultState();
+
+
+        ui.section =
+          'settings';
+
+
+        closeModal();
+
+        render();
+
+        notify(
+          'App resettata.'
+        );
+      };
+  }
+}
 // ============================================================
 // GRAFICI CANVAS
 // ============================================================
