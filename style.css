@@ -2338,6 +2338,678 @@ input:checked + span {
   font-size: 10px;
 }
 
+/* =========================================================
+   FULLSCREEN WORKOUT MODE
+   ========================================================= */
+
+body.workout-mode {
+  overflow: hidden;
+}
+
+
+/* Schermata completa */
+
+#workout-fullscreen {
+  position: fixed;
+
+  inset: 0;
+
+  z-index: 10000;
+
+  overflow: hidden;
+
+  color: var(--text);
+
+  background:
+    radial-gradient(
+      circle at 50% 24%,
+      rgba(53, 240, 255, 0.11),
+      transparent 33%
+    ),
+    radial-gradient(
+      circle at 80% 76%,
+      rgba(84, 205, 255, 0.06),
+      transparent 32%
+    ),
+    #050a13;
+}
+
+
+.workout-fullscreen-shell {
+  width: 100%;
+  height: 100%;
+
+  max-width: 620px;
+
+  margin: 0 auto;
+
+  display: flex;
+  flex-direction: column;
+
+  padding:
+    max(
+      18px,
+      env(safe-area-inset-top)
+    )
+    18px
+    max(
+      16px,
+      env(safe-area-inset-bottom)
+    );
+}
+
+
+/* =========================================================
+   HEADER
+   ========================================================= */
+
+.workout-fullscreen-header {
+  flex: 0 0 auto;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  gap: 15px;
+
+  min-height: 58px;
+}
+
+
+.workout-sheet-label {
+  margin-bottom: 4px;
+
+  color: var(--blue);
+
+  font-size: 9px;
+
+  font-weight: 800;
+
+  letter-spacing: 0.18em;
+}
+
+
+.workout-fullscreen-header strong {
+  font-size: 18px;
+
+  letter-spacing: -0.02em;
+}
+
+
+.workout-exercise-counter {
+  min-width: 50px;
+
+  height: 38px;
+
+  display: grid;
+
+  place-items: center;
+
+  border-radius: 13px;
+
+  border:
+    1px solid
+    rgba(84, 205, 255, 0.18);
+
+  background:
+    rgba(255, 255, 255, 0.035);
+
+  color: var(--muted);
+
+  font-size: 12px;
+
+  font-weight: 700;
+
+  -webkit-backdrop-filter:
+    blur(20px);
+
+  backdrop-filter:
+    blur(20px);
+}
+
+
+/* Progress superiore */
+
+.workout-top-progress {
+  flex: 0 0 auto;
+
+  width: 100%;
+
+  height: 3px;
+
+  margin-top: 10px;
+
+  overflow: hidden;
+
+  border-radius: 99px;
+
+  background:
+    rgba(255, 255, 255, 0.06);
+}
+
+
+.workout-top-progress span {
+  display: block;
+
+  height: 100%;
+
+  border-radius: inherit;
+
+  background:
+    linear-gradient(
+      90deg,
+      var(--blue),
+      var(--cyan)
+    );
+
+  transition:
+    width 0.35s ease;
+}
+
+
+/* =========================================================
+   AREA CENTRALE
+   ========================================================= */
+
+.workout-fullscreen-main {
+  flex: 1;
+
+  min-height: 0;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  padding:
+    24px
+    0;
+}
+
+
+.workout-center-screen {
+  width: 100%;
+
+  max-width: 470px;
+
+  margin: auto;
+
+  text-align: center;
+}
+
+
+.workout-center-screen h1 {
+  margin:
+    10px
+    0;
+
+  font-size:
+    clamp(
+      31px,
+      9vw,
+      50px
+    );
+
+  line-height: 1.02;
+
+  letter-spacing: -0.05em;
+}
+
+
+.workout-center-screen p {
+  margin:
+    10px
+    auto
+    24px;
+
+  max-width: 340px;
+
+  color: var(--muted);
+
+  font-size: 13px;
+
+  line-height: 1.55;
+}
+
+
+.workout-pretitle {
+  color: var(--blue);
+
+  font-size: 10px;
+
+  font-weight: 800;
+
+  letter-spacing: 0.19em;
+}
+
+
+.workout-big-exercise {
+  overflow-wrap: anywhere;
+}
+
+
+/* =========================================================
+   BOTTONE CENTRALE
+   ========================================================= */
+
+.workout-primary-button {
+  width: min(
+    100%,
+    360px
+  );
+
+  min-height: 62px;
+
+  margin-top: 24px;
+
+  padding:
+    14px
+    22px;
+
+  border: 0;
+
+  border-radius: 21px;
+
+  color: #031018;
+
+  background:
+    linear-gradient(
+      135deg,
+      #69ddff,
+      #35f0ff
+    );
+
+  box-shadow:
+    0 18px 45px
+    rgba(53, 240, 255, 0.16);
+
+  font-size: 15px;
+
+  font-weight: 750;
+
+  letter-spacing: -0.01em;
+}
+
+
+.workout-primary-button:active {
+  transform: scale(0.985);
+}
+
+
+/* =========================================================
+   ORB INIZIALE
+   ========================================================= */
+
+.workout-orb,
+.workout-final-orb,
+.workout-check {
+  width: 82px;
+
+  height: 82px;
+
+  margin:
+    0
+    auto
+    22px;
+
+  display: grid;
+
+  place-items: center;
+
+  border-radius: 50%;
+
+  color: var(--cyan);
+
+  border:
+    1px solid
+    rgba(53, 240, 255, 0.24);
+
+  background:
+    rgba(53, 240, 255, 0.065);
+
+  box-shadow:
+    inset 0 0 30px
+    rgba(53, 240, 255, 0.08),
+    0 0 45px
+    rgba(53, 240, 255, 0.06);
+
+  font-size: 30px;
+}
+
+
+.workout-final-orb,
+.workout-check {
+  color: var(--success);
+
+  border-color:
+    rgba(60, 229, 162, 0.25);
+
+  background:
+    rgba(60, 229, 162, 0.07);
+
+  box-shadow:
+    inset 0 0 30px
+    rgba(60, 229, 162, 0.08),
+    0 0 45px
+    rgba(60, 229, 162, 0.06);
+}
+
+
+/* =========================================================
+   INFO ESERCIZIO
+   ========================================================= */
+
+.workout-info-grid {
+  width: min(
+    100%,
+    390px
+  );
+
+  margin:
+    28px
+    auto
+    0;
+
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      3,
+      1fr
+    );
+
+  gap: 8px;
+}
+
+
+.workout-info-grid > div {
+  padding:
+    14px
+    8px;
+
+  border-radius: 17px;
+
+  border:
+    1px solid
+    rgba(133, 209, 255, 0.12);
+
+  background:
+    rgba(255, 255, 255, 0.027);
+
+  -webkit-backdrop-filter:
+    blur(18px);
+
+  backdrop-filter:
+    blur(18px);
+}
+
+
+.workout-info-grid span {
+  display: block;
+
+  margin-bottom: 5px;
+
+  color: var(--muted);
+
+  font-size: 9px;
+
+  text-transform: uppercase;
+
+  letter-spacing: 0.08em;
+}
+
+
+.workout-info-grid strong {
+  display: block;
+
+  font-size: 15px;
+}
+
+
+/* =========================================================
+   RIPETIZIONI
+   ========================================================= */
+
+.workout-set-label {
+  margin-top: 16px;
+
+  color: var(--muted);
+
+  font-size: 13px;
+}
+
+
+.workout-set-label.large {
+  margin-top: 24px;
+
+  color: var(--text);
+
+  font-size: 32px;
+
+  font-weight: 750;
+}
+
+
+.workout-reps-number {
+  margin-top: 18px;
+
+  font-size:
+    clamp(
+      92px,
+      28vw,
+      150px
+    );
+
+  font-weight: 300;
+
+  line-height: 0.9;
+
+  letter-spacing: -0.075em;
+
+  color: var(--text);
+
+  text-shadow:
+    0 0 50px
+    rgba(53, 240, 255, 0.10);
+}
+
+
+.workout-reps-label {
+  margin-top: 12px;
+
+  color: var(--muted);
+
+  font-size: 9px;
+
+  font-weight: 750;
+
+  letter-spacing: 0.18em;
+}
+
+
+.workout-weight-pill {
+  display: inline-flex;
+
+  margin-top: 20px;
+
+  padding:
+    8px
+    14px;
+
+  border-radius: 99px;
+
+  color: var(--cyan);
+
+  border:
+    1px solid
+    rgba(53, 240, 255, 0.17);
+
+  background:
+    rgba(53, 240, 255, 0.05);
+
+  font-size: 12px;
+
+  font-weight: 650;
+}
+
+
+/* =========================================================
+   TIMER
+   ========================================================= */
+
+.workout-timer {
+  margin:
+    25px
+    0
+    14px;
+
+  font-variant-numeric:
+    tabular-nums;
+
+  font-size:
+    clamp(
+      56px,
+      15vw,
+      88px
+    );
+
+  font-weight: 250;
+
+  line-height: 1;
+
+  letter-spacing: -0.06em;
+
+  color: var(--text);
+
+  text-shadow:
+    0 0 42px
+    rgba(53, 240, 255, 0.12);
+}
+
+
+.workout-timer.recovery {
+  color: var(--cyan);
+}
+
+
+/* =========================================================
+   SKIP
+   ========================================================= */
+
+.workout-text-button {
+  margin-top: 12px;
+
+  padding:
+    10px
+    16px;
+
+  border: 0;
+
+  background: transparent;
+
+  color: var(--blue);
+
+  font-size: 12px;
+}
+
+
+/* =========================================================
+   FOOTER FISSO
+   ========================================================= */
+
+.workout-fullscreen-footer {
+  flex: 0 0 auto;
+
+  display: grid;
+
+  grid-template-columns:
+    1fr
+    1fr;
+
+  gap: 9px;
+
+  padding-top: 13px;
+
+  border-top:
+    1px solid
+    rgba(133, 209, 255, 0.10);
+}
+
+
+.workout-footer-button {
+  min-height: 48px;
+
+  padding:
+    10px
+    12px;
+
+  border-radius: 16px;
+
+  font-size: 11px;
+
+  font-weight: 650;
+}
+
+
+.workout-footer-button.secondary {
+  color: var(--text);
+
+  border:
+    1px solid
+    rgba(133, 209, 255, 0.14);
+
+  background:
+    rgba(255, 255, 255, 0.035);
+}
+
+
+.workout-footer-button.danger {
+  color:
+    rgba(255, 154, 171, 0.92);
+
+  border:
+    1px solid
+    rgba(255, 104, 132, 0.17);
+
+  background:
+    rgba(255, 104, 132, 0.055);
+}
+
+
+/* =========================================================
+   BADGE SOSPESO
+   ========================================================= */
+
+.workout-status-pill {
+  display: inline-flex;
+
+  padding:
+    7px
+    11px;
+
+  margin-bottom: 8px;
+
+  border-radius: 99px;
+
+  color: var(--warning);
+
+  border:
+    1px solid
+    rgba(255, 211, 106, 0.19);
+
+  background:
+    rgba(255, 211, 106, 0.05);
+
+  font-size: 9px;
+
+  font-weight: 800;
+
+  letter-spacing: 0.16em;
+}
+
 @media (min-width: 700px) {
   .app-shell, .setup-shell {
     padding-top: 28px;

@@ -71,7 +71,7 @@ let ui = {
   calendarMonth: monthISO(todayISO()),
   chartPeriod: 'month'
 };
-let workoutRuntime = null;
+let workoutAnimationFrame = null;
 let toastTimer = null;
 
 // ============================================================
@@ -89,7 +89,7 @@ function defaultState() {
     currentHeight: null,
     runLogs: [],
     tennisLogs: [],
-    gymTemplates: { gym1: [], gym2: [], gym3: [] },
+    gymTemplates: { gym1: [], gym2: [], gym3: [] }, activeWorkout: null
   };
 }
 
@@ -3430,70 +3430,1382 @@ function renumberGymExercises() {
 }
 
 function startWorkout(key) {
-  const ex = state.gymTemplates[key];
-  if (!ex.length) {
+  const exercises =
+    state.gymTemplates[key];
+
+  if (!exercises.length) {
     openGymEditor(key);
-    notify('Prima configura gli esercizi.');
+
+    notify(
+      'Prima configura gli esercizi.'
+    );
+
     return;
   }
-  workoutRuntime = { key, expanded: ex.flatMap(item => Array.from({ length: item.sets }, (_, i) => ({ ...item, set: i + 1 }))), index: 0, phase: 'exercise', interval: null };
-  openModal(`<div id="workoutStage" class="workout-stage"></div>`);
-  renderWorkoutStage();
+
+
+  /*
+    Se esiste già una sessione
+    della stessa scheda, la riapriamo.
+  */
+  if (
+    state.activeWorkout &&
+    state.activeWorkout.key === key
+  ) {
+    openWorkoutScreen();
+
+    return;
+  }
+
+
+  /*
+    Se invece esiste una sessione
+    di un'altra scheda, non la sovrascriviamo.
+  */
+  if (
+    state.activeWorkout &&
+    state.activeWorkout.key !== key
+  ) {
+    notify(
+      'Hai già un allenamento sospeso.'
+    );
+
+    openWorkoutScreen();
+
+    return;
+  }
+
+
+  state.activeWorkout = {
+    key,
+
+    phase: 'ready',
+
+    exerciseIndex: 0,
+    setIndex: 0,
+
+    paused: false,
+
+    timerEndAt: null,
+    timerRemainingMs: null,
+
+    startedAt:
+      Date.now()
+  };
+
+
+  saveState();
+
+  openWorkoutScreen();
 }
 
-function renderWorkoutStage() {
-  const w = workoutRuntime;
-  const stage = document.getElementById('workoutStage');
-  if (!w || !stage)
-    return;
-  if (w.index >= w.expanded.length) {
-    stage.innerHTML = `<div class="exercise-title">Workout completato</div><p>Ottimo lavoro. Registra l'allenamento per aggiornare Strength.</p><button class="btn" id="finishWorkout">Completa allenamento</button>`;
-    document.getElementById('finishWorkout').onclick = () => { state.records[recordKey(todayISO(), w.key)] = { done: true, details: 'Workout guidato' }; saveState(); workoutRuntime = null; closeModal(); render(); notify('Strength aggiornato.'); };
+function getCurrentWorkoutExercise() {
+  const workout =
+    state.activeWorkout;
+
+  if (!workout) {
+    return null;
+  }
+
+  return (
+    state.gymTemplates[
+      workout.key
+    ][
+      workout.exerciseIndex
+    ] || null
+  );
+}
+
+function openWorkoutScreen() {
+  let screen =
+    document.getElementById(
+      'workout-fullscreen'
+    );
+
+  if (!screen) {
+    screen =
+      document.createElement(
+        'div'
+      );
+
+    screen.id =
+      'workout-fullscreen';
+
+    document.body.appendChild(
+      screen
+    );
+  }
+
+
+  document.body.classList.add(
+    'workout-mode'
+  );
+
+
+  renderWorkoutScreen();
+}
+
+function closeWorkoutScreen() {
+  if (workoutAnimationFrame) {
+    cancelAnimationFrame(
+      workoutAnimationFrame
+    );
+
+    workoutAnimationFrame =
+      null;
+  }
+
+
+  const screen =
+    document.getElementById(
+      'workout-fullscreen'
+    );
+
+  if (screen) {
+    screen.remove();
+  }
+
+
+  document.body.classList.remove(
+    'workout-mode'
+  );
+}
+
+function renderWorkoutScreen() {
+  const screen =
+    document.getElementById(
+      'workout-fullscreen'
+    );
+
+  const workout =
+    state.activeWorkout;
+
+
+  if (
+    !screen ||
+    !workout
+  ) {
     return;
   }
-  const ex = w.expanded[w.index];
-  if (w.phase === 'exercise') {
-    if (ex.mode === 'duration') {
-      countdownThenTimer(ex.value, `${ex.name} · Serie ${ex.set}/${ex.sets}`, () => { w.phase = 'rest'; renderWorkoutStage(); });
+
+
+  if (workoutAnimationFrame) {
+    cancelAnimationFrame(
+      workoutAnimationFrame
+    );
+
+    workoutAnimationFrame =
+      null;
+  }
+
+
+  const exercises =
+    state.gymTemplates[
+      workout.key
+    ];
+
+  const exercise =
+    getCurrentWorkoutExercise();
+
+  const sheetNumber =
+    workout.key.replace(
+      'gym',
+      ''
+    );
+
+  const progress =
+    exercises.length
+      ? (
+          workout.exerciseIndex /
+          exercises.length
+        ) * 100
+      : 0;
+
+
+  screen.innerHTML = `
+    <div class="workout-fullscreen-shell">
+
+
+      <!-- HEADER -->
+
+      <header class="workout-fullscreen-header">
+
+        <div>
+
+          <div class="workout-sheet-label">
+            SCHEDA ${sheetNumber}
+          </div>
+
+          <strong>
+            Allenamento
+          </strong>
+
+        </div>
+
+
+        <div class="workout-exercise-counter">
+          ${
+            Math.min(
+              workout.exerciseIndex + 1,
+              exercises.length
+            )
+          }
+          /
+          ${exercises.length}
+        </div>
+
+      </header>
+
+
+      <div class="workout-top-progress">
+
+        <span
+          style="width:${progress}%"
+        ></span>
+
+      </div>
+
+
+      <!-- CONTENUTO CENTRALE -->
+
+      <main class="workout-fullscreen-main">
+
+        ${renderWorkoutPhase(
+          workout,
+          exercise,
+          exercises
+        )}
+
+      </main>
+
+
+      <!-- BARRA INFERIORE -->
+
+      <footer class="workout-fullscreen-footer">
+
+        <button
+          type="button"
+          class="workout-footer-button secondary"
+          data-workout-suspend
+        >
+          Sospendi allenamento
+        </button>
+
+
+        <button
+          type="button"
+          class="workout-footer-button danger"
+          data-workout-finish
+        >
+          Fine allenamento
+        </button>
+
+      </footer>
+
+    </div>
+  `;
+
+
+  bindWorkoutScreen();
+
+
+  /*
+    Se siamo dentro un timer,
+    facciamo partire l'animazione.
+  */
+  if (
+    !workout.paused &&
+    workout.timerEndAt
+  ) {
+    animateWorkoutTimer();
+  }
+}
+
+function renderWorkoutPhase(
+  workout,
+  exercise,
+  exercises
+) {
+
+  /*
+    ALLENAMENTO SOSPESO
+  */
+  if (workout.paused) {
+    return `
+      <div class="workout-center-screen">
+
+        <div class="workout-status-pill">
+          SOSPESO
+        </div>
+
+        <h1>
+          Allenamento in pausa
+        </h1>
+
+        <p>
+          Riprenderai esattamente
+          dal punto in cui avevi lasciato.
+        </p>
+
+        <button
+          class="workout-primary-button"
+          data-workout-resume
+        >
+          Riprendi allenamento
+        </button>
+
+      </div>
+    `;
+  }
+
+
+  /*
+    PRIMA SCHERMATA
+  */
+  if (
+    workout.phase ===
+    'ready'
+  ) {
+    return `
+      <div class="workout-center-screen">
+
+        <div class="workout-orb">
+          ▶
+        </div>
+
+        <h1>
+          Pronto?
+        </h1>
+
+        <p>
+          ${
+            exercises.length
+          }
+          esercizi configurati
+        </p>
+
+
+        <button
+          class="workout-primary-button"
+          data-workout-start
+        >
+          Inizia allenamento
+        </button>
+
+      </div>
+    `;
+  }
+
+
+  /*
+    PROSSIMO ESERCIZIO
+  */
+  if (
+    workout.phase ===
+    'next'
+  ) {
+    return `
+      <div class="workout-center-screen">
+
+        <div class="workout-pretitle">
+          PROSSIMO ESERCIZIO
+        </div>
+
+        <h1 class="workout-big-exercise">
+          ${esc(
+            exercise.name
+          )}
+        </h1>
+
+
+        <div class="workout-info-grid">
+
+          <div>
+            <span>
+              Serie
+            </span>
+
+            <strong>
+              ${exercise.sets}
+            </strong>
+          </div>
+
+
+          <div>
+            <span>
+              ${
+                exercise.mode ===
+                'duration'
+                  ? 'Durata'
+                  : 'Ripetizioni'
+              }
+            </span>
+
+            <strong>
+              ${
+                exercise.value
+              }${
+                exercise.mode ===
+                'duration'
+                  ? 's'
+                  : ''
+              }
+            </strong>
+          </div>
+
+
+          <div>
+            <span>
+              Peso
+            </span>
+
+            <strong>
+              ${
+                exercise.weight
+                  ? `${exercise.weight} kg`
+                  : '—'
+              }
+            </strong>
+          </div>
+
+        </div>
+
+
+        <button
+          class="workout-primary-button"
+          data-workout-begin-exercise
+        >
+          Inizia esercizio
+        </button>
+
+      </div>
+    `;
+  }
+
+
+  /*
+    ESERCIZIO IN CORSO
+  */
+  if (
+    workout.phase ===
+    'exercise'
+  ) {
+
+    /*
+      ESERCIZIO A DURATA
+    */
+    if (
+      exercise.mode ===
+      'duration'
+    ) {
+      return `
+        <div class="workout-center-screen">
+
+          <div class="workout-pretitle">
+            ${esc(
+              exercise.name
+            )}
+          </div>
+
+
+          <div class="workout-set-label">
+            Ripetizione
+            ${
+              workout.setIndex + 1
+            }
+            /
+            ${exercise.sets}
+          </div>
+
+
+          <div
+            class="workout-timer"
+            id="workoutTimer"
+          >
+            ${formatWorkoutTime(
+              workoutTimerRemaining()
+            )}
+          </div>
+
+
+          <p>
+            ${
+              exercise.weight
+                ? `${exercise.weight} kg`
+                : ''
+            }
+          </p>
+
+        </div>
+      `;
     }
-    else {
-      stage.innerHTML = `<div class="exercise-title">${esc(ex.name)}</div><div class="exercise-detail">Serie ${ex.set} / ${ex.sets} · ${ex.value} ripetizioni${ex.weight ? ` · ${ex.weight} kg` : ''}</div><button class="btn" id="completeSet">Completato</button>`;
-      document.getElementById('completeSet').onclick = () => { w.phase = 'rest'; renderWorkoutStage(); };
+
+
+    /*
+      ESERCIZIO A RIPETIZIONI
+    */
+    return `
+      <div class="workout-center-screen">
+
+        <div class="workout-pretitle">
+          ${esc(
+            exercise.name
+          )}
+        </div>
+
+
+        <div class="workout-set-label">
+          Ripetizione
+          ${
+            workout.setIndex + 1
+          }
+          /
+          ${exercise.sets}
+        </div>
+
+
+        <div class="workout-reps-number">
+          ${exercise.value}
+        </div>
+
+        <div class="workout-reps-label">
+          RIPETIZIONI
+        </div>
+
+
+        ${
+          exercise.weight
+            ? `
+                <div class="workout-weight-pill">
+                  ${exercise.weight} kg
+                </div>
+              `
+            : ''
+        }
+
+
+        <button
+          class="workout-primary-button"
+          data-workout-finish-set
+        >
+          Fine ripetizione
+        </button>
+
+      </div>
+    `;
+  }
+
+
+  /*
+    TIMER FINITO PER ESERCIZIO A DURATA
+  */
+  if (
+    workout.phase ===
+    'setComplete'
+  ) {
+    return `
+      <div class="workout-center-screen">
+
+        <div class="workout-check">
+          ✓
+        </div>
+
+        <div class="workout-pretitle">
+          TEMPO COMPLETATO
+        </div>
+
+        <h1>
+          ${esc(
+            exercise.name
+          )}
+        </h1>
+
+
+        <button
+          class="workout-primary-button"
+          data-workout-finish-set
+        >
+          Fine ripetizione
+        </button>
+
+      </div>
+    `;
+  }
+
+
+  /*
+    RECUPERO
+  */
+  if (
+    workout.phase ===
+    'rest'
+  ) {
+    return `
+      <div class="workout-center-screen">
+
+        <div class="workout-pretitle">
+          RECUPERO
+        </div>
+
+
+        <div
+          class="workout-timer recovery"
+          id="workoutTimer"
+        >
+          ${formatWorkoutTime(
+            workoutTimerRemaining()
+          )}
+        </div>
+
+
+        <p>
+          Respira. Preparati alla prossima.
+        </p>
+
+
+        <button
+          class="workout-text-button"
+          data-workout-skip-rest
+        >
+          Salta recupero
+        </button>
+
+      </div>
+    `;
+  }
+
+
+  /*
+    TRA UNA SERIE E L'ALTRA
+  */
+  if (
+    workout.phase ===
+    'betweenSets'
+  ) {
+    return `
+      <div class="workout-center-screen">
+
+        <div class="workout-pretitle">
+          PROSSIMA RIPETIZIONE
+        </div>
+
+        <h1>
+          ${esc(
+            exercise.name
+          )}
+        </h1>
+
+
+        <div class="workout-set-label large">
+          ${
+            workout.setIndex + 1
+          }
+          /
+          ${exercise.sets}
+        </div>
+
+
+        <button
+          class="workout-primary-button"
+          data-workout-next-set
+        >
+          Inizia ripetizione
+        </button>
+
+      </div>
+    `;
+  }
+
+
+  /*
+    ESERCIZIO TERMINATO
+  */
+  if (
+    workout.phase ===
+    'exerciseComplete'
+  ) {
+    return `
+      <div class="workout-center-screen">
+
+        <div class="workout-check">
+          ✓
+        </div>
+
+        <div class="workout-pretitle">
+          ESERCIZIO COMPLETATO
+        </div>
+
+        <h1>
+          ${esc(
+            exercise.name
+          )}
+        </h1>
+
+
+        <button
+          class="workout-primary-button"
+          data-workout-finish-exercise
+        >
+          Fine esercizio
+        </button>
+
+      </div>
+    `;
+  }
+
+
+  /*
+    TUTTO COMPLETATO
+  */
+  if (
+    workout.phase ===
+    'complete'
+  ) {
+    return `
+      <div class="workout-center-screen">
+
+        <div class="workout-final-orb">
+          ✓
+        </div>
+
+        <div class="workout-pretitle">
+          WORKOUT COMPLETATO
+        </div>
+
+        <h1>
+          Allenamento terminato
+        </h1>
+
+        <p>
+          Tutti gli esercizi
+          della scheda sono stati completati.
+        </p>
+
+
+        <button
+          class="workout-primary-button"
+          data-workout-complete
+        >
+          Fine allenamento
+        </button>
+
+      </div>
+    `;
+  }
+
+
+  return '';
+}
+
+function bindWorkoutScreen() {
+  const start =
+    document.querySelector(
+      '[data-workout-start]'
+    );
+
+  if (start) {
+    start.onclick =
+      beginWorkout;
+  }
+
+
+  const beginExercise =
+    document.querySelector(
+      '[data-workout-begin-exercise]'
+    );
+
+  if (beginExercise) {
+    beginExercise.onclick =
+      beginCurrentWorkoutSet;
+  }
+
+
+  const finishSet =
+    document.querySelector(
+      '[data-workout-finish-set]'
+    );
+
+  if (finishSet) {
+    finishSet.onclick =
+      finishWorkoutSet;
+  }
+
+
+  const nextSet =
+    document.querySelector(
+      '[data-workout-next-set]'
+    );
+
+  if (nextSet) {
+    nextSet.onclick =
+      beginCurrentWorkoutSet;
+  }
+
+
+  const finishExercise =
+    document.querySelector(
+      '[data-workout-finish-exercise]'
+    );
+
+  if (finishExercise) {
+    finishExercise.onclick =
+      finishWorkoutExercise;
+  }
+
+
+  const skipRest =
+    document.querySelector(
+      '[data-workout-skip-rest]'
+    );
+
+  if (skipRest) {
+    skipRest.onclick =
+      finishWorkoutRecovery;
+  }
+
+
+  const suspend =
+    document.querySelector(
+      '[data-workout-suspend]'
+    );
+
+  if (suspend) {
+    suspend.onclick =
+      suspendWorkout;
+  }
+
+
+  const resume =
+    document.querySelector(
+      '[data-workout-resume]'
+    );
+
+  if (resume) {
+    resume.onclick =
+      resumeWorkout;
+  }
+
+
+  document
+    .querySelectorAll(
+      '[data-workout-finish]'
+    )
+    .forEach(button => {
+      button.onclick =
+        () =>
+          finishWorkoutSession(
+            false
+          );
+    });
+
+
+  const complete =
+    document.querySelector(
+      '[data-workout-complete]'
+    );
+
+  if (complete) {
+    complete.onclick =
+      () =>
+        finishWorkoutSession(
+          true
+        );
+  }
+}
+
+function beginWorkout() {
+  const workout =
+    state.activeWorkout;
+
+  if (!workout) {
+    return;
+  }
+
+  workout.phase =
+    'next';
+
+  saveState();
+
+  renderWorkoutScreen();
+}
+
+function beginCurrentWorkoutSet() {
+  const workout =
+    state.activeWorkout;
+
+  const exercise =
+    getCurrentWorkoutExercise();
+
+  if (
+    !workout ||
+    !exercise
+  ) {
+    return;
+  }
+
+
+  workout.phase =
+    'exercise';
+
+  workout.timerEndAt =
+    null;
+
+  workout.timerRemainingMs =
+    null;
+
+
+  /*
+    Se è un esercizio a durata,
+    parte immediatamente il timer.
+  */
+  if (
+    exercise.mode ===
+    'duration'
+  ) {
+    workout.timerEndAt =
+      Date.now() +
+      exercise.value * 1000;
+  }
+
+
+  saveState();
+
+  renderWorkoutScreen();
+}
+
+function finishWorkoutSet() {
+  const workout =
+    state.activeWorkout;
+
+  const exercise =
+    getCurrentWorkoutExercise();
+
+  if (
+    !workout ||
+    !exercise
+  ) {
+    return;
+  }
+
+
+  workout.phase =
+    'rest';
+
+  workout.timerRemainingMs =
+    null;
+
+
+  const recoveryMs =
+    Math.max(
+      0,
+      Number(
+        exercise.rest
+      ) * 1000
+    );
+
+
+  if (
+    recoveryMs === 0
+  ) {
+    finishWorkoutRecovery();
+
+    return;
+  }
+
+
+  workout.timerEndAt =
+    Date.now() +
+    recoveryMs;
+
+
+  saveState();
+
+  renderWorkoutScreen();
+}
+
+function finishWorkoutRecovery() {
+  const workout =
+    state.activeWorkout;
+
+  const exercise =
+    getCurrentWorkoutExercise();
+
+  if (
+    !workout ||
+    !exercise
+  ) {
+    return;
+  }
+
+
+  workout.timerEndAt =
+    null;
+
+  workout.timerRemainingMs =
+    null;
+
+
+  const isLastSet =
+    workout.setIndex >=
+    exercise.sets - 1;
+
+
+  if (isLastSet) {
+    workout.phase =
+      'exerciseComplete';
+
+  } else {
+    workout.setIndex++;
+
+    workout.phase =
+      'betweenSets';
+  }
+
+
+  saveState();
+
+  renderWorkoutScreen();
+}
+
+function finishWorkoutExercise() {
+  const workout =
+    state.activeWorkout;
+
+  if (!workout) {
+    return;
+  }
+
+
+  const exercises =
+    state.gymTemplates[
+      workout.key
+    ];
+
+
+  const isLastExercise =
+    workout.exerciseIndex >=
+    exercises.length - 1;
+
+
+  if (isLastExercise) {
+    workout.phase =
+      'complete';
+
+  } else {
+    workout.exerciseIndex++;
+
+    workout.setIndex = 0;
+
+    workout.phase =
+      'next';
+  }
+
+
+  workout.timerEndAt =
+    null;
+
+  workout.timerRemainingMs =
+    null;
+
+
+  saveState();
+
+  renderWorkoutScreen();
+}
+
+function suspendWorkout() {
+  const workout =
+    state.activeWorkout;
+
+  if (!workout) {
+    return;
+  }
+
+
+  /*
+    Se c'è un timer attivo,
+    salviamo esattamente
+    quanto tempo mancava.
+  */
+  if (
+    workout.timerEndAt
+  ) {
+    workout.timerRemainingMs =
+      Math.max(
+        0,
+        workout.timerEndAt -
+        Date.now()
+      );
+
+    workout.timerEndAt =
+      null;
+  }
+
+
+  workout.paused =
+    true;
+
+
+  saveState();
+
+  closeWorkoutScreen();
+
+  notify(
+    'Allenamento sospeso.'
+  );
+}
+
+function resumeWorkout() {
+  const workout =
+    state.activeWorkout;
+
+  if (!workout) {
+    return;
+  }
+
+
+  workout.paused =
+    false;
+
+
+  if (
+    workout.timerRemainingMs != null &&
+    workout.timerRemainingMs > 0
+  ) {
+    workout.timerEndAt =
+      Date.now() +
+      workout.timerRemainingMs;
+
+    workout.timerRemainingMs =
+      null;
+  }
+
+
+  saveState();
+
+  renderWorkoutScreen();
+}
+
+function finishWorkoutSession(
+  naturallyCompleted = false
+) {
+  const workout =
+    state.activeWorkout;
+
+  if (!workout) {
+    return;
+  }
+
+
+  /*
+    Se viene premuto dal bottone
+    fisso in basso mentre il workout
+    non è ancora finito, chiediamo conferma.
+  */
+  if (
+    !naturallyCompleted &&
+    workout.phase !==
+    'complete'
+  ) {
+    const confirmed =
+      confirm(
+        'Vuoi terminare l’allenamento adesso?'
+      );
+
+    if (!confirmed) {
+      return;
     }
   }
-  else {
-    countdownTimer(ex.rest, 'Recupero', () => { w.index++; w.phase = 'exercise'; renderWorkoutStage(); });
-  }
+
+
+  const key =
+    workout.key;
+
+
+  state.records[
+    recordKey(
+      todayISO(),
+      key
+    )
+  ] = {
+    done: true,
+    details:
+      'Workout guidato'
+  };
+
+
+  state.activeWorkout =
+    null;
+
+
+  saveState();
+
+  closeWorkoutScreen();
+
+  render();
+
+  notify(
+    'Allenamento completato.'
+  );
 }
 
-function countdownThenTimer(seconds, title, done) {
-  const stage = document.getElementById('workoutStage');
-  let pre = 3;
-  stage.innerHTML = `<div class="exercise-title">${esc(title)}</div><div class="counter">${pre}</div><p>Preparati</p>`;
-  const starter = setInterval(() => { pre--; if (pre > 0) {
-    stage.querySelector('.counter').textContent = pre;
+function workoutTimerRemaining() {
+  const workout =
+    state.activeWorkout;
+
+  if (!workout) {
+    return 0;
   }
-  else {
-    clearInterval(starter);
-    countdownTimer(seconds, title, done);
-  } }, 1000);
+
+
+  if (
+    workout.timerEndAt
+  ) {
+    return Math.max(
+      0,
+      workout.timerEndAt -
+      Date.now()
+    );
+  }
+
+
+  return Math.max(
+    0,
+    workout.timerRemainingMs ||
+    0
+  );
 }
 
-function countdownTimer(seconds, title, done) {
-  const stage = document.getElementById('workoutStage');
-  let remaining = seconds;
-  stage.innerHTML = `<div class="exercise-title">${esc(title)}</div><div class="counter">${remaining}</div><p>secondi</p><button class="btn secondary small" id="skipTimer">Salta</button>`;
-  const interval = setInterval(() => { remaining--; if (stage.querySelector('.counter'))
-    stage.querySelector('.counter').textContent = Math.max(0, remaining); if (remaining <= 0) {
-    clearInterval(interval);
-    done();
-  } }, 1000);
-  document.getElementById('skipTimer').onclick = () => { clearInterval(interval); done(); };
+function formatWorkoutTime(ms) {
+  const safe =
+    Math.max(
+      0,
+      Math.floor(ms)
+    );
+
+  const minutes =
+    Math.floor(
+      safe / 60000
+    );
+
+  const seconds =
+    Math.floor(
+      (
+        safe % 60000
+      ) / 1000
+    );
+
+  const milliseconds =
+    safe % 1000;
+
+
+  return (
+    String(minutes)
+      .padStart(2, '0') +
+    ':' +
+    String(seconds)
+      .padStart(2, '0') +
+    '.' +
+    String(milliseconds)
+      .padStart(3, '0')
+  );
+}
+
+function animateWorkoutTimer() {
+  if (
+    workoutAnimationFrame
+  ) {
+    cancelAnimationFrame(
+      workoutAnimationFrame
+    );
+  }
+
+
+  const tick = () => {
+    const workout =
+      state.activeWorkout;
+
+    if (
+      !workout ||
+      workout.paused
+    ) {
+      return;
+    }
+
+
+    const remaining =
+      workoutTimerRemaining();
+
+
+    const element =
+      document.getElementById(
+        'workoutTimer'
+      );
+
+
+    if (element) {
+      element.textContent =
+        formatWorkoutTime(
+          remaining
+        );
+    }
+
+
+    if (
+      remaining <= 0
+    ) {
+      workout.timerEndAt =
+        null;
+
+      workout.timerRemainingMs =
+        0;
+
+
+      /*
+        Fine esercizio a durata.
+      */
+      if (
+        workout.phase ===
+        'exercise'
+      ) {
+        workout.phase =
+          'setComplete';
+
+        saveState();
+
+        renderWorkoutScreen();
+
+        return;
+      }
+
+
+      /*
+        Fine recupero.
+      */
+      if (
+        workout.phase ===
+        'rest'
+      ) {
+        finishWorkoutRecovery();
+
+        return;
+      }
+    }
+
+
+    workoutAnimationFrame =
+      requestAnimationFrame(
+        tick
+      );
+  };
+
+
+  tick();
 }
 
 function openModal(html) { document.getElementById('modal-root').innerHTML = `<div class="modal-backdrop"><div class="modal"><button class="modal-close" onclick="closeModal()">✕</button>${html}</div></div>`; }
 
-function closeModal() { document.getElementById('modal-root').innerHTML = ''; workoutRuntime = null; }
+function closeModal() { document.getElementById('modal-root').innerHTML = ''; }
 window.closeModal = closeModal;
 
 // ============================================================
